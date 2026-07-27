@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.data.GemDataStore
 import com.example.model.GameStatus
 import com.example.viewmodel.GameViewModel
+import com.example.ads.RewardedAdManager
 import kotlinx.coroutines.delay
 
 @Composable
@@ -17,6 +18,7 @@ fun AppNavigation() {
     val gameViewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val gemDataStore = remember { GemDataStore(context) }
+    val rewardedAdManager = remember { RewardedAdManager(context).apply { loadAd() } }
     
     val gemCount by gemDataStore.gemCount.collectAsState(initial = 0)
     val gameState by gameViewModel.gameState.collectAsState()
@@ -42,9 +44,11 @@ fun AppNavigation() {
         
         composable("game") {
             GameScreen(
+                gameViewModel = gameViewModel,
                 gameState = gameState,
                 gemCount = gemCount,
                 gemDataStore = gemDataStore,
+                rewardedAdManager = rewardedAdManager,
                 onAction = { action ->
                     when (action) {
                         is GameAction.SetFiring -> gameViewModel.setFiring(action.isFiring)

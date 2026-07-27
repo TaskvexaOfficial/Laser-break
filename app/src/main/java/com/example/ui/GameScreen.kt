@@ -32,9 +32,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun GameScreen(
+    gameViewModel: com.example.viewmodel.GameViewModel,
     gameState: GameState,
     gemCount: Int,
     gemDataStore: GemDataStore,
+    rewardedAdManager: com.example.ads.RewardedAdManager,
     onAction: (GameAction) -> Unit
 ) {
     val context = LocalContext.current
@@ -56,10 +58,12 @@ fun GameScreen(
         }
     }
 
-    LaunchedEffect(gameState.status) {
+    LaunchedEffect(gameState.status, gameState.roundId) {
         if (gameState.status == GameStatus.WON) {
-            scope.launch {
-                gemDataStore.addGems(10)
+            if (gameViewModel.claimBaseWinReward(gameState.roundId)) {
+                scope.launch {
+                    gemDataStore.addGems(3) // Exact 3 coins
+                }
             }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
@@ -169,8 +173,8 @@ fun GameScreen(
 
         // Overlays
         when (gameState.status) {
-            GameStatus.WON -> ResultOverlay(true, gemCount, onAction)
-            GameStatus.LOST -> ResultOverlay(false, gemCount, onAction)
+            GameStatus.WON -> ResultOverlay(true, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, onAction)
+            GameStatus.LOST -> ResultOverlay(false, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, onAction)
             GameStatus.PAUSED -> PauseOverlay(onAction)
             else -> {}
         }

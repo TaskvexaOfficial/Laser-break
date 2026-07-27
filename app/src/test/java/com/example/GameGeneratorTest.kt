@@ -21,6 +21,8 @@ class GameGeneratorTest {
     fun testGenerator1000() {
         val vm = GameViewModel()
         
+        var hasDangerCount = 0
+        
         for (i in 0..1000) {
             vm.startNewGame()
             val structure = vm.gameState.value.structure
@@ -28,6 +30,14 @@ class GameGeneratorTest {
             
             // Check that type is only SEGMENTED_CIRCLE or SQUARE_LAYERS
             assertTrue(structure!!.type == com.example.model.StructureType.SEGMENTED_CIRCLE || structure.type == com.example.model.StructureType.SQUARE_LAYERS)
+            
+            val hasDanger = structure.layers.any { layer -> layer.segments.any { it.isDangerous } }
+            if (hasDanger) {
+                hasDangerCount++
+            }
         }
+        
+        // Every normal playable round must have black danger sections
+        assertTrue("Danger sections must appear in almost all rounds", hasDangerCount == 1001)
     }
 }

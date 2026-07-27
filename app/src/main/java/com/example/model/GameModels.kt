@@ -12,7 +12,7 @@ data class Segment(
     val layerIndex: Int,
     val startAngle: Float,
     val sweepAngle: Float,
-    val isDangerous: Boolean,
+    var isDangerous: Boolean,
     var isDestroyed: Boolean = false,
     var health: Float = 100f // Laser depletes this
 )
@@ -87,7 +87,8 @@ data class GameState(
     val laserTipY: Float = 0f,
     val shakeOffsetX: Float = 0f,
     val shakeOffsetY: Float = 0f,
-    val particles: List<Particle> = emptyList()
+    val particles: List<Particle> = emptyList(),
+    val roundId: String = ""
 )
 
 data class Particle(
