@@ -18,16 +18,16 @@ class GameGeneratorTest {
     }
 
     @Test
-    fun testGenerator() {
-        // Can't easily test private methods, but we can call startNewGame and check state
+    fun testGenerator1000() {
         val vm = GameViewModel()
-        vm.startNewGame()
-        assertNotNull(vm.gameState.value.structure)
         
-        // Loop and test many layouts
-        for (i in 0..100) {
+        for (i in 0..1000) {
             vm.startNewGame()
-            assertNotNull(vm.gameState.value.structure)
+            val structure = vm.gameState.value.structure
+            assertNotNull(structure)
+            
+            // Check that type is only SEGMENTED_CIRCLE or SQUARE_LAYERS
+            assertTrue(structure!!.type == com.example.model.StructureType.SEGMENTED_CIRCLE || structure.type == com.example.model.StructureType.SQUARE_LAYERS)
         }
     }
 }

@@ -87,7 +87,7 @@ class GameViewModel : ViewModel() {
         val maxTime = 45f
         val dt = 0.05f
         val breakTime = 0.4f
-        val reactionTime = 0.25f
+        val reactionTime = 0.4f // Increased reaction time for easier validation
         val laserAngularWidth = 8f
         
         var time = 0f
@@ -134,8 +134,8 @@ class GameViewModel : ViewModel() {
     }
 
     private fun createRandomStructure(attempt: Int): Structure {
-        val type = StructureType.values().random()
-        val numLayers = Random.nextInt(2, 5)
+        val type = if (Random.nextBoolean()) StructureType.SEGMENTED_CIRCLE else StructureType.SQUARE_LAYERS
+        val numLayers = Random.nextInt(2, 4) // 2 or 3 layers
         val colorTheme = AllThemes.random()
         
         val layers = mutableListOf<Layer>()
@@ -145,9 +145,7 @@ class GameViewModel : ViewModel() {
         
         for (i in 0 until numLayers) {
             val numSegments = when (type) {
-                StructureType.SEGMENTED_CIRCLE -> Random.nextInt(2, 9)
-                StructureType.ROTATING_HEXAGON -> 6
-                StructureType.TRIANGULAR_LAYERS -> 3
+                StructureType.SEGMENTED_CIRCLE -> Random.nextInt(2, 5) // 2 to 4 segments
                 StructureType.SQUARE_LAYERS -> 4
             }
             val segments = mutableListOf<Segment>()
@@ -155,24 +153,25 @@ class GameViewModel : ViewModel() {
             
             val safeIndex = Random.nextInt(numSegments)
             for (j in 0 until numSegments) {
-                val dangerChance = if (attempt > 25) 0.15f else 0.25f
+                val dangerChance = 0.15f // very low danger chance
                 val isDangerous = if (j == safeIndex) false else Random.nextFloat() < dangerChance
                 
-                val start = j * segmentAngle
-                val sweep = segmentAngle - 4f
+                val visualGap = 12f // large visual gap
+                val start = j * segmentAngle + (visualGap / 2f)
+                val sweep = segmentAngle - visualGap
                 
                 segments.add(
                     Segment(
                         id = i * 100 + j,
                         layerIndex = i,
-                        startAngle = start + 2f,
+                        startAngle = start,
                         sweepAngle = sweep,
                         isDangerous = isDangerous
                     )
                 )
             }
             
-            val speed = Random.nextFloat() * 40f + 30f + (i * 5f) 
+            val speed = Random.nextFloat() * 20f + 15f + (i * 2f) // Slower speeds
             layers.add(
                 Layer(
                     index = i,

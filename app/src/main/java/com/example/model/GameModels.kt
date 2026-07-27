@@ -4,8 +4,6 @@ import androidx.compose.ui.graphics.Color
 
 enum class StructureType {
     SEGMENTED_CIRCLE,
-    ROTATING_HEXAGON,
-    TRIANGULAR_LAYERS,
     SQUARE_LAYERS
 }
 
