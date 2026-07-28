@@ -48,7 +48,7 @@ fun AppNavigation(soundManager: SoundManager) {
                 gemCount = gemCount,
                 soundEnabled = soundEnabled,
                 onSoundToggle = { 
-                    scope.launch { gemDataStore.setSoundEnabled(it) }
+                    soundManager.setSoundEnabled(it); scope.launch { gemDataStore.setSoundEnabled(it) }
                 },
                 onPlayClick = {
                     gameViewModel.startNewGame()

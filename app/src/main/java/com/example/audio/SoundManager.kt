@@ -5,6 +5,8 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.example.R
 import android.util.Log
+import android.widget.Toast
+import com.example.BuildConfig
 class SoundManager(private val context: Context) : DefaultLifecycleObserver {
     private var bgmPlayer: MediaPlayer? = null
     private var laserPlayer: MediaPlayer? = null
@@ -15,13 +17,13 @@ class SoundManager(private val context: Context) : DefaultLifecycleObserver {
     private var isInBackground = false
     init {
         try {
-            bgmPlayer = MediaPlayer.create(context, R.raw.background_music)?.apply {
+            bgmPlayer = MediaPlayer.create(context.applicationContext, R.raw.background_music)?.apply {
                 isLooping = true
-                setVolume(0.25f, 0.25f)
+                setVolume(1.0f, 1.0f)
             }
-            laserPlayer = MediaPlayer.create(context, R.raw.laser_beam)?.apply {
+            laserPlayer = MediaPlayer.create(context.applicationContext, R.raw.laser_beam)?.apply {
                 isLooping = true
-                setVolume(0.65f, 0.65f)
+                setVolume(1.0f, 1.0f)
             }
         } catch (e: Exception) {
             e.printStackTrace()
