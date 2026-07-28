@@ -41,9 +41,11 @@ import com.example.model.ThemeBlue
 @Composable
 fun MainMenuScreen(
     gemCount: Int,
+    soundEnabled: Boolean = true,
+    onSoundToggle: (Boolean) -> Unit = {},
     onPlayClick: () -> Unit
 ) {
-    var soundEnabled by remember { mutableStateOf(true) }
+    // soundEnabled handled by param
     var isPlayPressed by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -80,7 +82,7 @@ fun MainMenuScreen(
             }
 
             IconButton(
-                onClick = { soundEnabled = !soundEnabled },
+                onClick = { onSoundToggle(!soundEnabled) },
                 modifier = Modifier
                     .size(48.dp)
                     .background(Color(0xFF1E293B).copy(alpha = 0.8f), CircleShape)

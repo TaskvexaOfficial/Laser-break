@@ -1,4 +1,5 @@
 package com.example.ui
+import com.example.audio.SoundManager
 
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -37,12 +38,20 @@ fun GameScreen(
     gemCount: Int,
     gemDataStore: GemDataStore,
     rewardedAdManager: com.example.ads.RewardedAdManager,
+    soundManager: SoundManager,
     onAction: (GameAction) -> Unit
 ) {
     val context = LocalContext.current
     val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(gameState.status) {
+        if (gameState.status == GameStatus.WON || gameState.status == GameStatus.LOST || gameState.status == GameStatus.PAUSED) {
+            soundManager.setLaserActive(false)
+        }
+    }
+
 
     var showInitialInstruction by remember { mutableStateOf(true) }
 
@@ -60,11 +69,6 @@ fun GameScreen(
 
     LaunchedEffect(gameState.status, gameState.roundId) {
         if (gameState.status == GameStatus.WON) {
-            if (gameViewModel.claimBaseWinReward(gameState.roundId)) {
-                scope.launch {
-                    gemDataStore.addGems(3) // Exact 3 coins
-                }
-            }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
@@ -173,8 +177,8 @@ fun GameScreen(
 
         // Overlays
         when (gameState.status) {
-            GameStatus.WON -> ResultOverlay(true, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, onAction)
-            GameStatus.LOST -> ResultOverlay(false, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, onAction)
+            GameStatus.WON -> ResultOverlay(true, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, soundManager, onAction)
+            GameStatus.LOST -> ResultOverlay(false, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, soundManager, onAction)
             GameStatus.PAUSED -> PauseOverlay(onAction)
             else -> {}
         }

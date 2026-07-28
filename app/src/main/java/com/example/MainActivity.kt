@@ -13,10 +13,21 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ui.theme.LaserBreakTheme
 import com.example.ui.AppNavigation
+import com.example.audio.SoundManager
 
 class MainActivity : ComponentActivity() {
+    private lateinit var soundManager: SoundManager
+
+    override fun onDestroy() {
+        super.onDestroy()
+        lifecycle.removeObserver(soundManager)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        soundManager = SoundManager(this)
+        lifecycle.addObserver(soundManager)
+
         MobileAds.initialize(this) {}
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -27,7 +38,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LaserBreakTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavigation()
+                    AppNavigation(soundManager = soundManager)
                 }
             }
         }

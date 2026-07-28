@@ -32,28 +32,33 @@ class GameViewModel : ViewModel() {
     // Reward Tracking
     private var baseWinRewardCreditedRoundId: String? = null
     private var completed3XAds = 0
+    private var activeRoundIdForAds: String? = null
     private var bonus3XCreditedRoundId: String? = null
     private var lossAdRewardCreditedRoundId: String? = null
 
     fun claimBaseWinReward(roundId: String): Boolean {
-        if (baseWinRewardCreditedRoundId == roundId) return false
+        if (baseWinRewardCreditedRoundId == roundId || bonus3XCreditedRoundId == roundId) return false
         baseWinRewardCreditedRoundId = roundId
         return true
     }
 
     fun getCompleted3XAds(roundId: String): Int {
         if (bonus3XCreditedRoundId == roundId) return 3 // Already fully claimed
-        // We need to tie completed ads to roundId. If roundId changes, reset.
+        if (activeRoundIdForAds != roundId) return 0
         return completed3XAds
     }
 
     fun record3XAdCompletion(roundId: String): Int {
+        if (activeRoundIdForAds != roundId) {
+            activeRoundIdForAds = roundId
+            completed3XAds = 0
+        }
         completed3XAds++
         return completed3XAds
     }
 
     fun claim3XBonusReward(roundId: String): Boolean {
-        if (bonus3XCreditedRoundId == roundId) return false
+        if (bonus3XCreditedRoundId == roundId || baseWinRewardCreditedRoundId == roundId) return false
         bonus3XCreditedRoundId = roundId
         return true
     }

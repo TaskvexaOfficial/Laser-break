@@ -10,22 +10,33 @@ import com.example.data.GemDataStore
 import com.example.model.GameStatus
 import com.example.viewmodel.GameViewModel
 import com.example.ads.RewardedAdManager
+import com.example.audio.SoundManager
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(soundManager: SoundManager) {
     val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
     val gameViewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val gemDataStore = remember { GemDataStore(context) }
     val rewardedAdManager = remember { RewardedAdManager(context).apply { loadAd() } }
     
+    
     val gemCount by gemDataStore.gemCount.collectAsState(initial = 0)
+    val soundEnabled by gemDataStore.soundEnabled.collectAsState(initial = true)
+    
+    LaunchedEffect(soundEnabled) {
+        soundManager.setSoundEnabled(soundEnabled)
+    }
+
     val gameState by gameViewModel.gameState.collectAsState()
 
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(onFinish = {
+                soundManager.startBgm()
                 navController.navigate("menu") {
                     popUpTo("splash") { inclusive = true }
                 }
@@ -35,6 +46,10 @@ fun AppNavigation() {
         composable("menu") {
             MainMenuScreen(
                 gemCount = gemCount,
+                soundEnabled = soundEnabled,
+                onSoundToggle = { 
+                    scope.launch { gemDataStore.setSoundEnabled(it) }
+                },
                 onPlayClick = {
                     gameViewModel.startNewGame()
                     navController.navigate("game")
@@ -49,9 +64,13 @@ fun AppNavigation() {
                 gemCount = gemCount,
                 gemDataStore = gemDataStore,
                 rewardedAdManager = rewardedAdManager,
+                soundManager = soundManager,
                 onAction = { action ->
                     when (action) {
-                        is GameAction.SetFiring -> gameViewModel.setFiring(action.isFiring)
+                        is GameAction.SetFiring -> {
+                            gameViewModel.setFiring(action.isFiring)
+                            soundManager.setLaserActive(action.isFiring)
+                        }
                         is GameAction.Pause -> gameViewModel.pauseGame()
                         is GameAction.Resume -> gameViewModel.resumeGame()
                         is GameAction.Home -> {
