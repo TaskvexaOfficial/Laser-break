@@ -1,6 +1,9 @@
 name: Build Audio Verified APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,60 +14,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Original Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      - name: Show Exact Source Commit
-        run: |
-          echo "Building source commit: $GITHUB_SHA"
-          git log -1 --oneline
-
-      - name: Verify Real Audio Files
+      - name: Verify audio files
         shell: bash
         run: |
-          set -euo pipefail
+          test -s app/src/main/res/raw/background_music.mp3
+          test -s app/src/main/res/raw/laser_beam.mp3
+          echo "Both audio files found successfully"
 
-          MUSIC="app/src/main/res/raw/background_music.mp3"
-          LASER="app/src/main/res/raw/laser_beam.mp3"
-
-          if [ ! -s "$MUSIC" ]; then
-            echo "ERROR: background_music.mp3 is missing or empty."
-            exit 1
-          fi
-
-          if [ ! -s "$LASER" ]; then
-            echo "ERROR: laser_beam.mp3 is missing or empty."
-            exit 1
-          fi
-
-          echo "Both audio files exist in the original repository:"
-          ls -lh "$MUSIC" "$LASER"
-          file "$MUSIC" "$LASER"
-
-      - name: Set Up Java 17
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Create Debug Keystore
+      - name: Create debug keystore
         shell: bash
         run: |
-          keytool -genkeypair \
-            -v \
-            -noprompt \
-            -keystore "$GITHUB_WORKSPACE/debug.keystore" \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000
+          keytool -genkeypair -v -noprompt \
+          -keystore "$GITHUB_WORKSPACE/debug.keystore" \
+          -storepass android \
+          -alias androiddebugkey \
+          -keypass android \
+          -dname "CN=Android Debug,O=Android,C=US" \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000
 
-      - name: Set Up Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.6.1"
@@ -73,35 +52,24 @@ jobs:
       - name: Build Debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Verify Audio Inside APK
+      - name: Verify audio inside APK
         shell: bash
         run: |
-          set -euo pipefail
-
           APK_FILE="$(find app/build/outputs/apk/debug -type f -name '*.apk' | head -n 1)"
 
           if [ -z "$APK_FILE" ]; then
-            echo "ERROR: APK file was not generated."
+            echo "ERROR: APK was not generated"
             exit 1
           fi
 
-          echo "Generated APK: $APK_FILE"
           unzip -l "$APK_FILE" > apk-contents.txt
 
-          if ! grep -q "res/raw/background_music.mp3" apk-contents.txt; then
-            echo "ERROR: Background music is not packaged inside the APK."
-            exit 1
-          fi
+          grep -q "background_music.mp3" apk-contents.txt
+          grep -q "laser_beam.mp3" apk-contents.txt
 
-          if ! grep -q "res/raw/laser_beam.mp3" apk-contents.txt; then
-            echo "ERROR: Laser sound is not packaged inside the APK."
-            exit 1
-          fi
+          echo "SUCCESS: Both audio files are inside the APK"
 
-          echo "SUCCESS: Both audio files are packaged inside the APK."
-          ls -lh "$APK_FILE"
-
-      - name: Upload Verified APK
+      - name: Upload verified APK
         uses: actions/upload-artifact@v4
         with:
           name: LaserBreak-Audio-Verified-APK
