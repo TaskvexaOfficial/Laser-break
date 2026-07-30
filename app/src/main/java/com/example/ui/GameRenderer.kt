@@ -8,6 +8,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
+
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -126,15 +128,64 @@ fun GameRenderer(gameState: GameState, isMenu: Boolean = false) {
                             style = Stroke(width = 2f)
                         )
                         
-                        // If health is low, draw some crack lines (simple lines for now)
-                        if (!isDanger && segment.health < 50f) {
-                            drawLine(
-                                color = Color.White.copy(alpha = 0.6f),
-                                start = Offset(gradStartX, gradStartY),
-                                end = Offset((gradStartX + gradEndX) / 2 + 10f, (gradStartY + gradEndY) / 2 - 10f),
-                                strokeWidth = 3f,
-                                cap = StrokeCap.Round
-                            )
+                        // Progressive damage cracks
+                        if (!isDanger && segment.health < 100f && segment.health > 0f) {
+                            val rng = java.util.Random(segment.id.toLong())
+                            
+                            val isHeavyDamage = segment.health < 35f
+                            val isMediumDamage = segment.health < 75f
+                            
+                            val shakeX = if (isHeavyDamage && gameState.isFiring) (kotlin.random.Random.nextFloat() * 4f - 2f) else 0f
+                            val shakeY = if (isHeavyDamage && gameState.isFiring) (kotlin.random.Random.nextFloat() * 4f - 2f) else 0f
+                            
+                            withTransform({
+                                translate(left = shakeX, top = shakeY)
+                                clipPath(path)
+                            }) {
+                                val numCracks = if (isHeavyDamage) 4 else if (isMediumDamage) 3 else 1
+                                val glowAlpha = if (isHeavyDamage) 0.3f else 0f
+                                
+                                if (glowAlpha > 0f) {
+                                    drawPath(
+                                        path = path,
+                                        color = structure.colorTheme.safeColorGlow.copy(alpha = glowAlpha),
+                                        style = Fill
+                                    )
+                                }
+                                
+                                for (i in 0 until numCracks) {
+                                    var currentX = gradStartX + (rng.nextFloat() * 20f - 10f)
+                                    var currentY = gradStartY + (rng.nextFloat() * 20f - 10f)
+                                    
+                                    val segmentsInCrack = rng.nextInt(3) + 2
+                                    for (j in 0 until segmentsInCrack) {
+                                        val nextX = currentX + (rng.nextFloat() * 60f - 30f)
+                                        val nextY = currentY + (rng.nextFloat() * 60f - 30f)
+                                        
+                                        if (isHeavyDamage) {
+                                            drawLine(
+                                                color = structure.colorTheme.safeColorGlow,
+                                                start = Offset(currentX, currentY),
+                                                end = Offset(nextX, nextY),
+                                                strokeWidth = 8f,
+                                                cap = StrokeCap.Round,
+                                                blendMode = androidx.compose.ui.graphics.BlendMode.Screen
+                                            )
+                                        }
+                                        
+                                        drawLine(
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            start = Offset(currentX, currentY),
+                                            end = Offset(nextX, nextY),
+                                            strokeWidth = 3f,
+                                            cap = StrokeCap.Round
+                                        )
+                                        
+                                        currentX = nextX
+                                        currentY = nextY
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -263,14 +314,26 @@ fun GameRenderer(gameState: GameState, isMenu: Boolean = false) {
         // Draw Particles
         for (p in gameState.particles) {
             val alpha = (p.life).coerceIn(0f, 1f)
+            
+            if (p.id == -999) { // Special flash particle
+                drawCircle(
+                    color = Color.White.copy(alpha = alpha * 0.9f),
+                    radius = 60.dp.toPx() * (1f + (1f - alpha)), // expands slightly as it fades
+                    center = Offset(cx + p.x, cy + p.y)
+                )
+                continue
+            }
+            
+            val shrink = if (p.id <= -1000) alpha else 1f // If it's a burst particle, shrink it as it dies
+            
             drawCircle(
                 color = Color.White.copy(alpha = alpha),
-                radius = 4.dp.toPx() * alpha,
+                radius = 4.dp.toPx() * shrink,
                 center = Offset(cx + p.x, cy + p.y) // translate to structure center
             )
             drawCircle(
                 color = p.color.copy(alpha = alpha * 0.5f),
-                radius = 12.dp.toPx() * alpha,
+                radius = 12.dp.toPx() * shrink,
                 center = Offset(cx + p.x, cy + p.y) // translate to structure center
             )
         }
