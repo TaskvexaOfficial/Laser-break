@@ -361,19 +361,38 @@ class GameViewModel : ViewModel() {
     private fun updateGame(dt: Float) {
         val state = _gameState.value
         if (state.status != GameStatus.PLAYING) return
-
         val structure = state.structure ?: return
+        
+        var newTransitionTimer = state.transitionTimer
+        var newPendingStatus = state.pendingStatus
+        
+        if (newPendingStatus != null) {
+            newTransitionTimer -= dt
+            if (newTransitionTimer <= 0f) {
+                 _gameState.update {
+                      it.copy(
+                          status = newPendingStatus,
+                          transitionTimer = 0f,
+                          pendingStatus = null,
+                          isFiring = false
+                      )
+                 }
+                 gameLoopJob?.cancel()
+                 return
+            }
+        }
+
         var gameOver = false
         var win = false
         var hitSegment: Segment? = null
         var hitRadius = 0f
-
+        
         // Update rotations
         val updatedLayers = structure.layers.map { layer ->
             val rotDelta = layer.rotationSpeed * dt * (if (layer.isClockwise) 1 else -1)
             layer.copy(currentRotation = (layer.currentRotation + rotDelta) % 360f)
         }
-
+        
         // Collision detection if firing
         // Update particles first so collision can add to it
         val newParticles = state.particles.map { it.copy(
@@ -381,9 +400,10 @@ class GameViewModel : ViewModel() {
             y = it.y + it.vy * dt,
             vx = it.vx * kotlin.math.max(1f - 2.5f * dt, 0f),
             vy = it.vy * kotlin.math.max(1f - 2.5f * dt, 0f),
+            rotation = it.rotation + it.rotSpeed * dt,
             life = it.life - dt * 2f
         ) }.filter { it.life > 0 }.toMutableList()
-
+        
         if (state.isFiring) {
             val laserHitAngle = 90f 
             val laserAngularWidth = 8f
@@ -400,44 +420,67 @@ class GameViewModel : ViewModel() {
                     hitSegment = segment
                     hitRadius = layer.radius
                     
-                    if (segment.isDangerous) {
-                        gameOver = true
-                    } else {
-                        // Damage segment
-                        if (segment.health > 0f) {
-                            segment.health -= 250f * dt // Takes ~0.4s to break
-                            if (segment.health <= 0f) {
-                                segment.isDestroyed = true
-                                
-                                // One final bright impact flash
-                                newParticles.add(Particle(
-                                    id = -999,
-                                    x = 0f,
-                                    y = hitRadius,
-                                    vx = 0f,
-                                    vy = 0f,
-                                    life = 1f,
-                                    color = structure.colorTheme.safeColorGlow
-                                ))
-                                
-                                // Burst of 14-20 fragments
-                                val burstColor = structure.colorTheme.safeColorGlow
-                                val numBurstParticles = (14..20).random()
-                                for (p in 0 until numBurstParticles) {
-                                    if (newParticles.size < 60) {
-                                        val angle = kotlin.random.Random.nextFloat() * 2 * Math.PI
-                                        val speed = kotlin.random.Random.nextFloat() * 250f + 100f
-                                        newParticles.add(Particle(
-                                            id = -1000 - kotlin.random.Random.nextInt(1000), // indicate burst particle
-                                            x = 0f, 
-                                            y = hitRadius,
-                                            vx = (Math.cos(angle) * speed).toFloat(),
-                                            vy = (Math.sin(angle) * speed).toFloat(),
-                                            life = 1f + kotlin.random.Random.nextFloat() * 0.5f,
-                                            color = burstColor
-                                        ))
-                                    }
+                    // Damage segment
+                    if (segment.health > 0f) {
+                        segment.health -= 250f * dt // Takes ~0.4s to break
+                        if (segment.health <= 0f) {
+                            segment.isDestroyed = true
+                            
+                            // One final bright impact flash
+                            newParticles.add(Particle(
+                                id = -999,
+                                x = 0f,
+                                y = hitRadius,
+                                vx = 0f,
+                                vy = 0f,
+                                life = 1f,
+                                color = if (segment.isDangerous) androidx.compose.ui.graphics.Color.White else structure.colorTheme.safeColorGlow
+                            ))
+                            
+                            // Burst of 16-24 fragments
+                            val burstColor = if (segment.isDangerous) structure.colorTheme.dangerousColor else structure.colorTheme.safeColorGlow
+                            val numBurstParticles = (16..24).random()
+                            for (p in 0 until numBurstParticles) {
+                                if (newParticles.size < 60) {
+                                    val angle = kotlin.random.Random.nextFloat() * 2 * Math.PI
+                                    val speed = kotlin.random.Random.nextFloat() * 250f + 100f
+                                    newParticles.add(Particle(
+                                        id = -1000 - kotlin.random.Random.nextInt(1000), // indicate burst particle
+                                        x = 0f, 
+                                        y = hitRadius,
+                                        vx = (Math.cos(angle) * speed).toFloat(),
+                                        vy = (Math.sin(angle) * speed).toFloat(),
+                                        life = 1f + kotlin.random.Random.nextFloat() * 0.5f,
+                                        color = burstColor,
+                                        rotation = kotlin.random.Random.nextFloat() * 360f,
+                                        rotSpeed = kotlin.random.Random.nextFloat() * 360f - 180f,
+                                        size = kotlin.random.Random.nextFloat() * 8f + 4f,
+                                        isAngular = true
+                                    ))
                                 }
+                            }
+                            
+                            // A few glowing sparks around the fragments
+                            for (p in 0 until 8) {
+                                if (newParticles.size < 80) {
+                                    val angle = kotlin.random.Random.nextFloat() * 2 * Math.PI
+                                    val speed = kotlin.random.Random.nextFloat() * 150f + 50f
+                                    newParticles.add(Particle(
+                                        id = kotlin.random.Random.nextInt(),
+                                        x = 0f, 
+                                        y = hitRadius,
+                                        vx = (Math.cos(angle) * speed).toFloat(),
+                                        vy = (Math.sin(angle) * speed).toFloat(),
+                                        life = 1f + kotlin.random.Random.nextFloat() * 0.3f,
+                                        color = if (segment.isDangerous) androidx.compose.ui.graphics.Color.White else structure.colorTheme.safeColorGlow,
+                                        size = 4f,
+                                        isAngular = false
+                                    ))
+                                }
+                            }
+                            
+                            if (segment.isDangerous) {
+                                gameOver = true
                             }
                         }
                     }
@@ -445,7 +488,7 @@ class GameViewModel : ViewModel() {
                 }
             }
         }
-
+        
         // Check win condition (all breakable segments destroyed)
         if (!gameOver) {
             val allSafeDestroyed = updatedLayers.all { layer ->
@@ -455,61 +498,77 @@ class GameViewModel : ViewModel() {
                 win = true
             }
         }
-
+        
         // Update particles
         var newShakeX = 0f
         var newShakeY = 0f
-
-        if (state.isFiring && hitSegment != null && !hitSegment.isDangerous) {
-            newShakeX = Random.nextFloat() * 6f - 3f
-            newShakeY = Random.nextFloat() * 6f - 3f
+        if (state.isFiring && hitSegment != null && hitSegment.health > 0f) {
+            if (hitSegment.isDangerous) {
+                newShakeX = kotlin.random.Random.nextFloat() * 10f - 5f
+                newShakeY = kotlin.random.Random.nextFloat() * 10f - 5f
+            } else {
+                newShakeX = kotlin.random.Random.nextFloat() * 6f - 3f
+                newShakeY = kotlin.random.Random.nextFloat() * 6f - 3f
+            }
+            
             // Spawn particles
-            if (Random.nextFloat() < 0.5f) {
+            if (kotlin.random.Random.nextFloat() < 0.5f) {
                 // Calculate hit position
-                // Assuming center is (0,0) here, we will translate in UI
                 val rad = hitRadius
                 val px = 0f
                 val py = rad
                 newParticles.add(Particle(
-                    id = Random.nextInt(),
-                    x = px + Random.nextFloat() * 20 - 10,
-                    y = py + Random.nextFloat() * 20 - 10,
-                    vx = Random.nextFloat() * 100 - 50,
-                    vy = Random.nextFloat() * 50 + 50,
+                    id = kotlin.random.Random.nextInt(),
+                    x = px + kotlin.random.Random.nextFloat() * 20 - 10,
+                    y = py + kotlin.random.Random.nextFloat() * 20 - 10,
+                    vx = kotlin.random.Random.nextFloat() * 100 - 50,
+                    vy = kotlin.random.Random.nextFloat() * 50 + 50,
                     life = 1f,
-                    color = structure.colorTheme.safeColorGlow
+                    color = if (hitSegment.isDangerous) androidx.compose.ui.graphics.Color.White else structure.colorTheme.safeColorGlow,
+                    size = 3f,
+                    isAngular = false
                 ))
             }
         }
-
+        if (gameOver && hitSegment != null && hitSegment.isDangerous && hitSegment.health <= 0f) {
+             newShakeX = kotlin.random.Random.nextFloat() * 20f - 10f
+             newShakeY = kotlin.random.Random.nextFloat() * 20f - 10f
+        }
+        
         if (gameOver) {
             _gameState.update {
                 it.copy(
-                    status = GameStatus.LOST,
+                    transitionTimer = 0.45f,
+                    pendingStatus = GameStatus.LOST,
                     structure = structure.copy(layers = updatedLayers),
                     particles = newParticles,
-                    isFiring = false
+                    isFiring = false,
+                    shakeOffsetX = newShakeX,
+                    shakeOffsetY = newShakeY
                 )
             }
-            gameLoopJob?.cancel()
-        } else if (win) {
+        } else if (win) { 
              _gameState.update {
                 it.copy(
-                    status = GameStatus.WON,
+                    transitionTimer = 0.45f,
+                    pendingStatus = GameStatus.WON,
                     structure = structure.copy(layers = updatedLayers),
                     particles = newParticles,
-                    isFiring = false
+                    isFiring = false,
+                    shakeOffsetX = newShakeX,
+                    shakeOffsetY = newShakeY
                 )
             }
-            gameLoopJob?.cancel()
-        } else {
+        } else { 
              _gameState.update {
                 it.copy(
                     structure = structure.copy(layers = updatedLayers),
                     particles = newParticles,
                     laserTipY = hitRadius, // if 0, it shoots through to center
                     shakeOffsetX = newShakeX,
-                    shakeOffsetY = newShakeY
+                    shakeOffsetY = newShakeY,
+                    transitionTimer = newTransitionTimer,
+                    pendingStatus = newPendingStatus
                 )
             }
         }

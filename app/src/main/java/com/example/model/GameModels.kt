@@ -88,7 +88,9 @@ data class GameState(
     val shakeOffsetX: Float = 0f,
     val shakeOffsetY: Float = 0f,
     val particles: List<Particle> = emptyList(),
-    val roundId: String = ""
+    val roundId: String = "",
+    val transitionTimer: Float = 0f,
+    val pendingStatus: GameStatus? = null
 )
 
 data class Particle(
@@ -98,5 +100,9 @@ data class Particle(
     var vx: Float,
     var vy: Float,
     var life: Float,
-    val color: Color
+    val color: Color,
+    var rotation: Float = 0f,
+    var rotSpeed: Float = 0f,
+    var size: Float = 5f,
+    var isAngular: Boolean = false
 )

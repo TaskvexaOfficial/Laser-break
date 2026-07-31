@@ -30,6 +30,18 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
+      - name: Restore Valid Audio Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p app/src/main/res/raw/
+          gh release download audio-assets-v1 -p "background_music.mp3" --clobber -D app/src/main/res/raw/
+          gh release download audio-assets-v1 -p "laser_beam.mp3" --clobber -D app/src/main/res/raw/
+          if [ ! -s app/src/main/res/raw/background_music.mp3 ] || [ ! -s app/src/main/res/raw/laser_beam.mp3 ]; then
+            echo "Error: Audio files are missing or empty."
+            exit 1
+          fi
+
       - name: Decode Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

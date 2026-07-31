@@ -129,7 +129,7 @@ fun GameRenderer(gameState: GameState, isMenu: Boolean = false) {
                         )
                         
                         // Progressive damage cracks
-                        if (!isDanger && segment.health < 100f && segment.health > 0f) {
+                        if (segment.health < 100f && segment.health > 0f) {
                             val rng = java.util.Random(segment.id.toLong())
                             
                             val isHeavyDamage = segment.health < 35f
@@ -325,17 +325,36 @@ fun GameRenderer(gameState: GameState, isMenu: Boolean = false) {
             }
             
             val shrink = if (p.id <= -1000) alpha else 1f // If it's a burst particle, shrink it as it dies
+            val rad = p.size * shrink
             
-            drawCircle(
-                color = Color.White.copy(alpha = alpha),
-                radius = 4.dp.toPx() * shrink,
-                center = Offset(cx + p.x, cy + p.y) // translate to structure center
-            )
-            drawCircle(
-                color = p.color.copy(alpha = alpha * 0.5f),
-                radius = 12.dp.toPx() * shrink,
-                center = Offset(cx + p.x, cy + p.y) // translate to structure center
-            )
+            if (p.isAngular) {
+                withTransform({
+                    translate(left = cx + p.x, top = cy + p.y)
+                    rotate(p.rotation)
+                }) {
+                    drawRect(
+                        color = p.color.copy(alpha = alpha),
+                        topLeft = androidx.compose.ui.geometry.Offset(-rad, -rad),
+                        size = androidx.compose.ui.geometry.Size(rad * 2, rad * 2)
+                    )
+                    drawRect(
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = alpha * 0.8f),
+                        topLeft = androidx.compose.ui.geometry.Offset(-rad * 0.5f, -rad * 0.5f),
+                        size = androidx.compose.ui.geometry.Size(rad, rad)
+                    )
+                }
+            } else {
+                drawCircle(
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = alpha),
+                    radius = rad,
+                    center = androidx.compose.ui.geometry.Offset(cx + p.x, cy + p.y) // translate to structure center
+                )
+                drawCircle(
+                    color = p.color.copy(alpha = alpha * 0.5f),
+                    radius = rad * 2.5f,
+                    center = androidx.compose.ui.geometry.Offset(cx + p.x, cy + p.y) // translate to structure center
+                )
+            }
         }
     }
 }
