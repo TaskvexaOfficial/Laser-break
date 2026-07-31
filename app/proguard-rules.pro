@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep SoundManager methods so lifecycle observer works properly
+-keep class com.example.audio.SoundManager { *; }
+
+# Keep MediaPlayer callbacks if any
+-keep class android.media.MediaPlayer { *; }
