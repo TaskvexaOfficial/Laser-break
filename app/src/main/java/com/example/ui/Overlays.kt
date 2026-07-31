@@ -155,14 +155,16 @@ fun ResultOverlay(
                                     rewardedAdManager.showAd(
                                         activity = activity,
                                         onRewardEarned = {
-                                            soundManager.setAdActive(false)
                                             val newCount = gameViewModel.record3XAdCompletion(roundId)
                                             completedAds = newCount
-                                            isLoadingAd = false
                                             if (newCount >= 3 && gameViewModel.claim3XBonusReward(roundId)) {
                                                 scope.launch { gemDataStore.addGems(9) }
                                                 Toast.makeText(context, "3X Reward Claimed! +9 Coins", Toast.LENGTH_SHORT).show()
                                             }
+                                        },
+                                        onAdDismissed = {
+                                            soundManager.setAdActive(false)
+                                            isLoadingAd = false
                                         },
                                         onAdNotReady = {
                                             soundManager.setAdActive(false)
@@ -236,13 +238,15 @@ fun ResultOverlay(
                                     rewardedAdManager.showAd(
                                         activity = activity,
                                         onRewardEarned = {
-                                            soundManager.setAdActive(false)
-                                            isLoadingAd = false
                                             if (gameViewModel.claimLossAdReward(roundId)) {
                                                 isLossClaimed = true
                                                 scope.launch { gemDataStore.addGems(3) }
                                                 Toast.makeText(context, "Reward Claimed! +3 Coins", Toast.LENGTH_SHORT).show()
                                             }
+                                        },
+                                        onAdDismissed = {
+                                            soundManager.setAdActive(false)
+                                            isLoadingAd = false
                                         },
                                         onAdNotReady = {
                                             soundManager.setAdActive(false)

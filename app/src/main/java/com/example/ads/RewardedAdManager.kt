@@ -32,26 +32,39 @@ class RewardedAdManager(private val context: Context) {
                     Log.d("RewardedAdManager", "Ad loaded")
                     rewardedAd = ad
                     
-                    rewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
-                        override fun onAdDismissedFullScreenContent() {
-                            rewardedAd = null
-                            loadAd() // Preload the next ad
-                        }
-
-                        override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                            rewardedAd = null
-                            loadAd()
-                        }
-                    }
+                    
                 }
             }
         )
     }
 
-    fun showAd(activity: Activity, onRewardEarned: () -> Unit, onAdNotReady: () -> Unit) {
+    fun showAd(
+        activity: Activity, 
+        onRewardEarned: () -> Unit, 
+        onAdDismissed: () -> Unit, 
+        onAdNotReady: () -> Unit
+    ) {
         if (rewardedAd != null) {
+            var rewardEarned = false
+            
+            rewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdDismissedFullScreenContent() {
+                    rewardedAd = null
+                    onAdDismissed()
+                    loadAd() // Preload the next ad
+                }
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    rewardedAd = null
+                    onAdDismissed()
+                    loadAd()
+                }
+            }
+            
             rewardedAd?.show(activity) { _ ->
-                onRewardEarned()
+                if (!rewardEarned) {
+                    rewardEarned = true
+                    onRewardEarned()
+                }
             }
         } else {
             Log.d("RewardedAdManager", "Ad wasn't ready yet.")
