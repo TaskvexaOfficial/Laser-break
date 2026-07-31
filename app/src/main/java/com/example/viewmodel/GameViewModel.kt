@@ -491,9 +491,13 @@ class GameViewModel : ViewModel() {
         
         // Check win condition (all breakable segments destroyed)
         if (!gameOver) {
-            val allSafeDestroyed = updatedLayers.all { layer ->
-                layer.segments.filter { !it.isDangerous }.all { it.isDestroyed }
-            }
+            val hasSafeSegments = updatedLayers.any { layer -> layer.segments.any { !it.isDangerous } }
+            val allSafeDestroyed = if (hasSafeSegments) {
+                updatedLayers.all { layer ->
+                    layer.segments.filter { !it.isDangerous }.all { it.isDestroyed }
+                }
+            } else false
+            
             if (allSafeDestroyed) {
                 win = true
             }

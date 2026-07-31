@@ -206,10 +206,12 @@ fun ResultOverlay(
                         
                         Button(
                             onClick = { 
-                                if (gameViewModel.claimBaseWinReward(roundId)) {
-                                    scope.launch { gemDataStore.addGems(3) }
+                                scope.launch {
+                                    if (gameViewModel.claimBaseWinReward(roundId)) {
+                                        gemDataStore.addGems(3)
+                                    }
+                                    onAction(GameAction.PlayAgain)
                                 }
-                                onAction(GameAction.PlayAgain) 
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFFF)),
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -298,13 +300,15 @@ fun ResultOverlay(
                     
                     TextButton(
                         onClick = { 
-                            if (isWin) {
-                                if (gameViewModel.claimBaseWinReward(roundId)) {
-                                    scope.launch { gemDataStore.addGems(3) }
-                                }
-                            }
-                            onAction(GameAction.Home) 
-                        }
+                             scope.launch {
+                                 if (isWin) {
+                                    if (gameViewModel.claimBaseWinReward(roundId)) {
+                                        gemDataStore.addGems(3)
+                                    }
+                                 }
+                                 onAction(GameAction.Home)
+                             }
+                         }
                     ) {
                         Text("HOME", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }

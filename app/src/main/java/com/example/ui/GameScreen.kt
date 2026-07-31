@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -64,7 +65,13 @@ fun GameScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            // Safely cancel game loop on exit without navigating
+            gameViewModel.resetToMenu()
         }
+    }
+    
+    BackHandler {
+        onAction(GameAction.Home)
     }
 
     LaunchedEffect(gameState.status, gameState.roundId) {
