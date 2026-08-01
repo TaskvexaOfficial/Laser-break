@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
@@ -43,6 +44,7 @@ fun ResultOverlay(
     var completedAds by remember { mutableStateOf(gameViewModel.getCompleted3XAds(roundId)) }
     var isLoadingAd by remember { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
+    val isAdReady by rewardedAdManager.isAdReady.collectAsState()
 
     LaunchedEffect(Unit) {
         visible = true
@@ -149,7 +151,7 @@ fun ResultOverlay(
                         val isClaimed = completedAds >= 3
                         OutlinedButton(
                             onClick = {
-                                if (activity != null && !isClaimed && !isLoadingAd) {
+                                if (activity != null && !isClaimed && !isLoadingAd && isAdReady) {
                                     isLoadingAd = true
                                     soundManager.setAdActive(true)
                                     rewardedAdManager.showAd(
@@ -181,16 +183,16 @@ fun ResultOverlay(
                             ),
                             modifier = Modifier.fillMaxWidth().height(64.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !isClaimed && !isLoadingAd
+                            enabled = !isClaimed && !isLoadingAd && isAdReady
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (isLoadingAd) "LOADING..." else if (isClaimed) "REWARD CLAIMED" else "3X REWARD", 
+                                    text = if (isLoadingAd || !isAdReady) "LOADING AD..." else if (isClaimed) "REWARD CLAIMED" else "3X REWARD", 
                                     fontSize = 18.sp, 
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF00FFFF)
                                 )
-                                if (!isClaimed && !isLoadingAd) {
+                                if (!isClaimed && !isLoadingAd && isAdReady) {
                                     val remaining = 3 - completedAds
                                     val smallText = if (completedAds == 0) "Watch 3 Ads" else "$remaining Ads Left"
                                     Text(
@@ -234,7 +236,7 @@ fun ResultOverlay(
                         
                         OutlinedButton(
                             onClick = {
-                                if (activity != null && !isLossClaimed && !isLoadingAd) {
+                                if (activity != null && !isLossClaimed && !isLoadingAd && isAdReady) {
                                     isLoadingAd = true
                                     soundManager.setAdActive(true)
                                     rewardedAdManager.showAd(
@@ -265,16 +267,16 @@ fun ResultOverlay(
                             ),
                             modifier = Modifier.fillMaxWidth().height(64.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !isLossClaimed && !isLoadingAd
+                            enabled = !isLossClaimed && !isLoadingAd && isAdReady
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (isLoadingAd) "LOADING..." else if (isLossClaimed) "REWARD CLAIMED" else "GET 3", 
+                                    text = if (isLoadingAd || !isAdReady) "LOADING AD..." else if (isLossClaimed) "REWARD CLAIMED" else "GET 3", 
                                     fontSize = 18.sp, 
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF00FFFF)
                                 )
-                                if (!isLossClaimed && !isLoadingAd) {
+                                if (!isLossClaimed && !isLoadingAd && isAdReady) {
                                     Text(
                                         text = "Watch Ad", 
                                         fontSize = 12.sp,
