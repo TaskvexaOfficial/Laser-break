@@ -10,18 +10,28 @@ import com.example.data.GemDataStore
 import com.example.model.GameStatus
 import com.example.viewmodel.GameViewModel
 import com.example.ads.RewardedAdManager
+import com.example.ads.ConsentManager
 import com.example.audio.SoundManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation(soundManager: SoundManager) {
+fun AppNavigation(soundManager: SoundManager, consentManager: ConsentManager) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     val gameViewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val gemDataStore = remember { GemDataStore(context) }
-    val rewardedAdManager = remember { RewardedAdManager(context).apply { loadAd() } }
+    val rewardedAdManager = remember { RewardedAdManager(context) }
+    
+    val canRequestAds by consentManager.canRequestAds.collectAsState()
+    LaunchedEffect(canRequestAds) {
+        if (canRequestAds) {
+            rewardedAdManager.loadAd()
+        }
+    }
+    
+    val isPrivacyOptionsRequired by consentManager.isPrivacyOptionsRequired.collectAsState()
     
     
     val gemCount by gemDataStore.gemCount.collectAsState(initial = 0)
@@ -53,6 +63,12 @@ fun AppNavigation(soundManager: SoundManager) {
                 onPlayClick = {
                     gameViewModel.startNewGame()
                     navController.navigate("game")
+                },
+                isPrivacyOptionsRequired = isPrivacyOptionsRequired,
+                onPrivacyOptionsClick = {
+                    consentManager.showPrivacyOptionsForm {
+                        // Optional: Handle dismiss
+                    }
                 }
             )
         }

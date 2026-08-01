@@ -43,7 +43,9 @@ fun MainMenuScreen(
     gemCount: Int,
     soundEnabled: Boolean = true,
     onSoundToggle: (Boolean) -> Unit = {},
-    onPlayClick: () -> Unit
+    onPlayClick: () -> Unit,
+    isPrivacyOptionsRequired: Boolean = false,
+    onPrivacyOptionsClick: () -> Unit = {}
 ) {
     // soundEnabled handled by param
     var isPlayPressed by remember { mutableStateOf(false) }
@@ -231,6 +233,12 @@ fun MainMenuScreen(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
+            if (isPrivacyOptionsRequired) {
+                TextButton(onClick = onPrivacyOptionsClick) {
+                    Text("Privacy Options", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             Text(
                 text = "A TaskVexa Game",
                 color = Color.White.copy(alpha = 0.7f),

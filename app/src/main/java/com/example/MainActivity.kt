@@ -14,9 +14,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ui.theme.LaserBreakTheme
 import com.example.ui.AppNavigation
 import com.example.audio.SoundManager
+import com.example.ads.ConsentManager
 
 class MainActivity : ComponentActivity() {
     private lateinit var soundManager: SoundManager
+    private lateinit var consentManager: ConsentManager
 
     override fun onDestroy() {
         super.onDestroy()
@@ -25,10 +27,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        consentManager = ConsentManager(this)
+        consentManager.gatherConsent {}
         soundManager = SoundManager(this)
         lifecycle.addObserver(soundManager)
 
-        MobileAds.initialize(this) {}
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -38,7 +41,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LaserBreakTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavigation(soundManager = soundManager)
+                    AppNavigation(soundManager = soundManager, consentManager = consentManager)
                 }
             }
         }
