@@ -20,14 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import com.example.viewmodel.GameViewModel
 import com.example.data.GemDataStore
 import com.example.ads.RewardedAdManager
 import com.example.audio.SoundManager
 
-@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun ResultOverlay(
     isWin: Boolean,
@@ -161,7 +158,7 @@ fun ResultOverlay(
                                             val newCount = gameViewModel.record3XAdCompletion(roundId)
                                             completedAds = newCount
                                             if (newCount >= 3 && gameViewModel.claim3XBonusReward(roundId)) {
-                                                GlobalScope.launch { gemDataStore.addGems(9) }
+                                                scope.launch { gemDataStore.addGems(9) }
                                                 Toast.makeText(context, "3X Reward Claimed! +9 Coins", Toast.LENGTH_SHORT).show()
                                             }
                                         },
@@ -209,12 +206,12 @@ fun ResultOverlay(
                         
                         Button(
                             onClick = { 
-                                GlobalScope.launch {
+                                scope.launch {
                                     if (gameViewModel.claimBaseWinReward(roundId)) {
                                         gemDataStore.addGems(3)
                                     }
+                                    onAction(GameAction.PlayAgain)
                                 }
-                                onAction(GameAction.PlayAgain)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFFF)),
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -245,7 +242,7 @@ fun ResultOverlay(
                                         onRewardEarned = {
                                             if (gameViewModel.claimLossAdReward(roundId)) {
                                                 isLossClaimed = true
-                                                GlobalScope.launch { gemDataStore.addGems(3) }
+                                                scope.launch { gemDataStore.addGems(3) }
                                                 Toast.makeText(context, "Reward Claimed! +3 Coins", Toast.LENGTH_SHORT).show()
                                             }
                                         },
@@ -304,13 +301,15 @@ fun ResultOverlay(
                     TextButton(
                         onClick = { 
                              if (isWin) {
-                                 GlobalScope.launch {
+                                 scope.launch {
                                      if (gameViewModel.claimBaseWinReward(roundId)) {
                                          gemDataStore.addGems(3)
                                      }
+                                     onAction(GameAction.Home)
                                  }
+                             } else {
+                                 onAction(GameAction.Home)
                              }
-                             onAction(GameAction.Home)
                          }
                     ) {
                         Text("HOME", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp, fontWeight = FontWeight.Bold)
