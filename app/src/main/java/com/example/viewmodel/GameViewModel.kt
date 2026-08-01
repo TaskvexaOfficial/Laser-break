@@ -491,14 +491,19 @@ class GameViewModel : ViewModel() {
         
         // Check win condition (all breakable segments destroyed)
         if (!gameOver) {
-            val hasSafeSegments = updatedLayers.any { layer -> layer.segments.any { !it.isDangerous } }
-            val allSafeDestroyed = if (hasSafeSegments) {
-                updatedLayers.all { layer ->
-                    layer.segments.filter { !it.isDangerous }.all { it.isDestroyed }
+            var safeSegmentAlive = false
+            for (layer in updatedLayers) {
+                for (segment in layer.segments) {
+                    if (!segment.isDangerous && !segment.isDestroyed) {
+                        safeSegmentAlive = true
+                        break
+                    }
                 }
-            } else false
+                if (safeSegmentAlive) break
+            }
             
-            if (allSafeDestroyed) {
+            // Win if no safe segments are left alive
+            if (!safeSegmentAlive) {
                 win = true
             }
         }
@@ -539,7 +544,7 @@ class GameViewModel : ViewModel() {
              newShakeY = kotlin.random.Random.nextFloat() * 20f - 10f
         }
         
-        if (gameOver) {
+        if (newPendingStatus == null && gameOver) {
             _gameState.update {
                 it.copy(
                     transitionTimer = 0.45f,
@@ -551,7 +556,7 @@ class GameViewModel : ViewModel() {
                     shakeOffsetY = newShakeY
                 )
             }
-        } else if (win) { 
+        } else if (newPendingStatus == null && win) {
              _gameState.update {
                 it.copy(
                     transitionTimer = 0.45f,
@@ -563,7 +568,7 @@ class GameViewModel : ViewModel() {
                     shakeOffsetY = newShakeY
                 )
             }
-        } else { 
+        } else {
              _gameState.update {
                 it.copy(
                     structure = structure.copy(layers = updatedLayers),
@@ -572,7 +577,8 @@ class GameViewModel : ViewModel() {
                     shakeOffsetX = newShakeX,
                     shakeOffsetY = newShakeY,
                     transitionTimer = newTransitionTimer,
-                    pendingStatus = newPendingStatus
+                    pendingStatus = newPendingStatus,
+                    isFiring = if (newPendingStatus != null) false else state.isFiring
                 )
             }
         }

@@ -92,11 +92,12 @@ fun GameScreen(
         }
     }
     
-    // Vibration during firing
+    // Synchronization for laser visual and audio
     LaunchedEffect(gameState.isFiring) {
         if (gameState.isFiring) {
             showInitialInstruction = false
         }
+        soundManager.setLaserActive(gameState.isFiring)
     }
 
     GameBackground(
