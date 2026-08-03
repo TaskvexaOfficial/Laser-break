@@ -17,7 +17,7 @@ import android.os.Looper
 
 class RewardedAdManager(private val context: Context) {
     private var rewardedAd: RewardedAd? = null
-    private val adUnitId = "ca-app-pub-3940256099942544/5224354917" // Test ad unit
+    private val adUnitId = com.example.BuildConfig.REWARDED_AD_UNIT_ID
     
     private var isAdLoading = false
     private var retryAttempt = 0
