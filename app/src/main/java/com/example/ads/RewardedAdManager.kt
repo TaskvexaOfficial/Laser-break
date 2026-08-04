@@ -14,13 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.example.BuildConfig
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicBoolean
 
 class RewardedAdManager(private val context: Context) {
     private var rewardedVideo: StartAppAd? = null
 
     private var isAdLoading = false
-    private val isShowingAd = AtomicBoolean(false)
     private val isShowingAd = AtomicBoolean(false)
     private val _isAdReady = MutableStateFlow(false)
     val isAdReady: StateFlow<Boolean> = _isAdReady.asStateFlow()
