@@ -25,3 +25,10 @@
 
 # Keep MediaPlayer callbacks if any
 -keep class android.media.MediaPlayer { *; }
+
+# StartApp
+-keep class com.startapp.** { *; }
+-keep class com.truenet.** { *; }
+-keepattributes Exceptions, InnerClasses, Signature, Deprecated, SourceFile, LineNumberTable, *Annotation*, EnclosingMethod
+-dontwarn com.startapp.**
+-dontwarn com.truenet.**

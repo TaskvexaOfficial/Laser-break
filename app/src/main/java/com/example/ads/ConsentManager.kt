@@ -2,7 +2,6 @@ package com.example.ads
 
 import android.app.Activity
 import android.util.Log
-import com.google.android.gms.ads.MobileAds
 import com.google.android.ump.ConsentDebugSettings
 import com.google.android.ump.ConsentForm
 import com.google.android.ump.ConsentInformation
@@ -11,7 +10,6 @@ import com.google.android.ump.UserMessagingPlatform
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.atomic.AtomicBoolean
 
 class ConsentManager(private val activity: Activity) {
     private val consentInformation: ConsentInformation = UserMessagingPlatform.getConsentInformation(activity)
@@ -22,7 +20,6 @@ class ConsentManager(private val activity: Activity) {
     private val _isPrivacyOptionsRequired = MutableStateFlow(false)
     val isPrivacyOptionsRequired: StateFlow<Boolean> = _isPrivacyOptionsRequired.asStateFlow()
 
-    private var isMobileAdsInitializeCalled = AtomicBoolean(false)
 
     init {
         _canRequestAds.value = consentInformation.canRequestAds()
@@ -63,16 +60,10 @@ class ConsentManager(private val activity: Activity) {
         _isPrivacyOptionsRequired.value = consentInformation.privacyOptionsRequirementStatus == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
         
         if (consentInformation.canRequestAds()) {
-            initializeMobileAdsSdk()
         }
     }
 
-    private fun initializeMobileAdsSdk() {
-        if (isMobileAdsInitializeCalled.getAndSet(true)) {
-            return
-        }
-        MobileAds.initialize(activity) {}
-    }
+
 
     fun showPrivacyOptionsForm(onFormDismissed: () -> Unit) {
         UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->

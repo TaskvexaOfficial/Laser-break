@@ -1,7 +1,6 @@
 package com.example
 
 import android.os.Bundle
-import com.google.android.gms.ads.MobileAds
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
