@@ -53,6 +53,17 @@ jobs:
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleRelease
+      - name: Generate Debug Keystore
+        run: |
+          keytool -genkeypair -noprompt \
+            -keystore "$GITHUB_WORKSPACE/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000
       - name: Build Debug APK
         run: gradle assembleDebug
 
@@ -72,3 +83,6 @@ jobs:
       - name: Cleanup Keystore
         if: always()
         run: rm -f my-upload-key.jks
+      - name: Cleanup Debug Keystore
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/debug.keystore"
