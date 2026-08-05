@@ -25,11 +25,6 @@ fun AppNavigation(soundManager: SoundManager, consentManager: ConsentManager) {
     val rewardedAdManager = remember { RewardedAdManager(context) }
     
     val canRequestAds by consentManager.canRequestAds.collectAsState()
-    LaunchedEffect(canRequestAds) {
-        if (canRequestAds) {
-            rewardedAdManager.loadAd()
-        }
-    }
     
     val isPrivacyOptionsRequired by consentManager.isPrivacyOptionsRequired.collectAsState()
     

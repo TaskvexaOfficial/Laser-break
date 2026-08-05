@@ -25,6 +25,7 @@ class RewardedAdManager(private val context: Context) {
 
     init {
         StartAppSDK.setTestAdsEnabled(BuildConfig.DEBUG)
+        loadAd()
     }
 
     fun loadAd() {
@@ -50,9 +51,13 @@ class RewardedAdManager(private val context: Context) {
             }
 
             override fun onFailedToReceiveAd(ad: Ad?) {
-                Log.d("RewardedAdManager", "Ad failed to load")
+                val errorMsg = ad?.errorMessage ?: "Unknown error"
+                Log.d("RewardedAdManager", "Ad failed to load: $errorMsg")
                 isAdLoading = false
                 _isAdReady.value = false
+                if (BuildConfig.DEBUG) {
+                    android.widget.Toast.makeText(context, "Start.io load failed: $errorMsg", android.widget.Toast.LENGTH_LONG).show()
+                }
             }
         })
     }
