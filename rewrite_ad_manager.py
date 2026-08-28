@@ -1,11 +1,10 @@
-package com.example.ads
+import sys
+
+content = """package com.example.ads
 
 import android.app.Activity
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import com.startapp.sdk.adsbase.Ad
 import com.startapp.sdk.adsbase.StartAppAd
 import com.startapp.sdk.adsbase.StartAppSDK
@@ -25,7 +24,6 @@ enum class AdLoadState {
 class RewardedAdManager(private val context: Context) {
     private var rewardedVideo: StartAppAd? = null
     private val isShowingAd = AtomicBoolean(false)
-    private val mainHandler = Handler(Looper.getMainLooper())
     
     private val _isAdReady = MutableStateFlow(false)
     val isAdReady: StateFlow<Boolean> = _isAdReady.asStateFlow()
@@ -33,56 +31,43 @@ class RewardedAdManager(private val context: Context) {
     private val _adLoadState = MutableStateFlow(AdLoadState.LOADING)
     val adLoadState: StateFlow<AdLoadState> = _adLoadState.asStateFlow()
 
-    private val _lastErrorMessage = MutableStateFlow<String?>(null)
-    val lastErrorMessage: StateFlow<String?> = _lastErrorMessage.asStateFlow()
-
     init {
         StartAppSDK.setTestAdsEnabled(BuildConfig.DEBUG)
         loadAd()
     }
 
     fun loadAd() {
-        mainHandler.post {
-            if (rewardedVideo != null && rewardedVideo!!.isReady) {
+        if (rewardedVideo != null && rewardedVideo!!.isReady) {
+            _isAdReady.value = true
+            _adLoadState.value = AdLoadState.READY
+            return
+        }
+        
+        if (_adLoadState.value == AdLoadState.LOADING && rewardedVideo != null) return
+        
+        _adLoadState.value = AdLoadState.LOADING
+        _isAdReady.value = false
+        
+        if (rewardedVideo == null) {
+            rewardedVideo = StartAppAd(context)
+        }
+        
+        rewardedVideo?.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
+            override fun onReceiveAd(ad: Ad) {
+                Log.d("RewardedAdManager", "Ad loaded")
                 _isAdReady.value = true
                 _adLoadState.value = AdLoadState.READY
-                _lastErrorMessage.value = null
-                return@post
             }
-            
-            if (_adLoadState.value == AdLoadState.LOADING && rewardedVideo != null) return@post
-            
-            _adLoadState.value = AdLoadState.LOADING
-            _isAdReady.value = false
-            _lastErrorMessage.value = null
-            
-            if (rewardedVideo == null) {
-                rewardedVideo = StartAppAd(context)
-            }
-            
-            rewardedVideo?.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
-                override fun onReceiveAd(ad: Ad) {
-                    mainHandler.post {
-                        Log.d("RewardedAdManager", "Start.io Rewarded ad loaded successfully")
-                        _isAdReady.value = true
-                        _adLoadState.value = AdLoadState.READY
-                        _lastErrorMessage.value = null
-                    }
-                }
 
-                override fun onFailedToReceiveAd(ad: Ad?) {
-                    val errorMsg = ad?.errorMessage ?: "UNKNOWN START.IO LOAD ERROR"
-                    Log.e("RewardedAdManager", "Ad failed to load: $errorMsg")
-                    mainHandler.post {
-                        _isAdReady.value = false
-                        _adLoadState.value = AdLoadState.FAILED
-                        _lastErrorMessage.value = errorMsg
-                        
-                        Toast.makeText(context, "Start.io: $errorMsg", Toast.LENGTH_LONG).show()
-                    }
-                }
-            })
-        }
+            override fun onFailedToReceiveAd(ad: Ad?) {
+                val errorMsg = ad?.errorMessage ?: "UNKNOWN START.IO LOAD ERROR"
+                Log.e("RewardedAdManager", "Ad failed to load: $errorMsg")
+                _isAdReady.value = false
+                _adLoadState.value = AdLoadState.FAILED
+                
+                android.widget.Toast.makeText(context, "Start.io load failed: $errorMsg", android.widget.Toast.LENGTH_LONG).show()
+            }
+        })
     }
 
     fun showAd(
@@ -100,7 +85,6 @@ class RewardedAdManager(private val context: Context) {
             val rewardDelivered = AtomicBoolean(false)
             rewardedVideo?.setVideoListener {
                 if (rewardDelivered.compareAndSet(false, true)) {
-                    Log.d("RewardedAdManager", "Start.io rewarded video completed. Granting reward.")
                     onRewardEarned()
                 }
             }
@@ -115,16 +99,9 @@ class RewardedAdManager(private val context: Context) {
                         loadAd()
                     }
 
-                    override fun adDisplayed(ad: Ad?) {
-                        Log.d("RewardedAdManager", "Start.io ad displayed")
-                    }
-
-                    override fun adClicked(ad: Ad?) {
-                        Log.d("RewardedAdManager", "Start.io ad clicked")
-                    }
-
+                    override fun adDisplayed(ad: Ad?) {}
+                    override fun adClicked(ad: Ad?) {}
                     override fun adNotDisplayed(ad: Ad?) {
-                        Log.w("RewardedAdManager", "Start.io ad not displayed")
                         isShowingAd.set(false)
                         onAdDismissed()
                         loadAd()
@@ -149,3 +126,7 @@ class RewardedAdManager(private val context: Context) {
         }
     }
 }
+"""
+
+with open('app/src/main/java/com/example/ads/RewardedAdManager.kt', 'w') as f:
+    f.write(content)

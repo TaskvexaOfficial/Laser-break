@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import com.example.viewmodel.GameViewModel
 import com.example.data.GemDataStore
 import com.example.ads.RewardedAdManager
+import com.example.ads.AdLoadState
 import com.example.audio.SoundManager
 
 @Composable
@@ -45,6 +46,8 @@ fun ResultOverlay(
     var isLoadingAd by remember { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
     val isAdReady by rewardedAdManager.isAdReady.collectAsState()
+    val adLoadState by rewardedAdManager.adLoadState.collectAsState()
+    val lastErrorMessage by rewardedAdManager.lastErrorMessage.collectAsState()
 
     LaunchedEffect(Unit) {
         visible = true
@@ -151,6 +154,10 @@ fun ResultOverlay(
                         val isClaimed = completedAds >= 3
                         OutlinedButton(
                             onClick = {
+                                if (adLoadState == AdLoadState.FAILED) {
+                                    rewardedAdManager.loadAd()
+                                    return@OutlinedButton
+                                }
                                 if (activity != null && !isClaimed && !isLoadingAd && isAdReady) {
                                     isLoadingAd = true
                                     soundManager.setAdActive(true)
@@ -183,16 +190,23 @@ fun ResultOverlay(
                             ),
                             modifier = Modifier.fillMaxWidth().height(64.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !isClaimed && !isLoadingAd && isAdReady
+                            enabled = !isClaimed && !isLoadingAd && (isAdReady || adLoadState == AdLoadState.FAILED)
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (isLoadingAd || !isAdReady) "LOADING AD..." else if (isClaimed) "REWARD CLAIMED" else "3X REWARD", 
+                                    text = if (isClaimed) "REWARD CLAIMED" else if (isLoadingAd) "LOADING AD..." else if (adLoadState == AdLoadState.FAILED) "RETRY AD" else if (!isAdReady) "LOADING AD..." else "3X REWARD", 
                                     fontSize = 18.sp, 
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF00FFFF)
                                 )
-                                if (!isClaimed && !isLoadingAd && isAdReady) {
+                                if (adLoadState == AdLoadState.FAILED && lastErrorMessage != null) {
+                                    Text(
+                                        text = lastErrorMessage ?: "", 
+                                        fontSize = 10.sp,
+                                        color = Color(0xFFFF6B6B),
+                                        maxLines = 1
+                                    )
+                                } else if (!isClaimed && !isLoadingAd && isAdReady) {
                                     val remaining = 3 - completedAds
                                     val smallText = if (completedAds == 0) "Watch 3 Ads" else "$remaining Ads Left"
                                     Text(
@@ -236,6 +250,10 @@ fun ResultOverlay(
                         
                         OutlinedButton(
                             onClick = {
+                                if (adLoadState == AdLoadState.FAILED) {
+                                    rewardedAdManager.loadAd()
+                                    return@OutlinedButton
+                                }
                                 if (activity != null && !isLossClaimed && !isLoadingAd && isAdReady) {
                                     isLoadingAd = true
                                     soundManager.setAdActive(true)
@@ -267,16 +285,23 @@ fun ResultOverlay(
                             ),
                             modifier = Modifier.fillMaxWidth().height(64.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !isLossClaimed && !isLoadingAd && isAdReady
+                            enabled = !isLossClaimed && !isLoadingAd && (isAdReady || adLoadState == AdLoadState.FAILED)
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (isLoadingAd || !isAdReady) "LOADING AD..." else if (isLossClaimed) "REWARD CLAIMED" else "GET 3", 
+                                    text = if (isLossClaimed) "REWARD CLAIMED" else if (isLoadingAd) "LOADING AD..." else if (adLoadState == AdLoadState.FAILED) "RETRY AD" else if (!isAdReady) "LOADING AD..." else "GET 3", 
                                     fontSize = 18.sp, 
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF00FFFF)
                                 )
-                                if (!isLossClaimed && !isLoadingAd && isAdReady) {
+                                if (adLoadState == AdLoadState.FAILED && lastErrorMessage != null) {
+                                    Text(
+                                        text = lastErrorMessage ?: "", 
+                                        fontSize = 10.sp,
+                                        color = Color(0xFFFF6B6B),
+                                        maxLines = 1
+                                    )
+                                } else if (!isLossClaimed && !isLoadingAd && isAdReady) {
                                     Text(
                                         text = "Watch Ad", 
                                         fontSize = 12.sp,
