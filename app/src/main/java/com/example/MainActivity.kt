@@ -14,6 +14,7 @@ import com.example.ui.theme.LaserBreakTheme
 import com.example.ui.AppNavigation
 import com.example.audio.SoundManager
 import com.example.ads.ConsentManager
+import com.example.ads.UnityAdsManager
 
 class MainActivity : ComponentActivity() {
     private lateinit var soundManager: SoundManager
@@ -30,6 +31,9 @@ class MainActivity : ComponentActivity() {
         consentManager.gatherConsent {}
         soundManager = SoundManager(this)
         lifecycle.addObserver(soundManager)
+
+        // Initialize Unity Ads SDK with real Game ID in test mode
+        UnityAdsManager.getInstance(this).initialize(this, testMode = true)
 
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)

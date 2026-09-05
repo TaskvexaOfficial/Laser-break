@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.example.viewmodel.GameViewModel
 import com.example.data.GemDataStore
-import com.example.ads.RewardedAdManager
+import com.example.ads.UnityAdsManager
 import com.example.ads.AdLoadState
 import com.example.audio.SoundManager
 
@@ -34,7 +34,7 @@ fun ResultOverlay(
     roundId: String,
     gameViewModel: GameViewModel,
     gemDataStore: GemDataStore,
-    rewardedAdManager: RewardedAdManager,
+    unityAdsManager: UnityAdsManager,
     soundManager: SoundManager,
     onAction: (GameAction) -> Unit
 ) {
@@ -45,9 +45,9 @@ fun ResultOverlay(
     var completedAds by remember { mutableStateOf(gameViewModel.getCompleted3XAds(roundId)) }
     var isLoadingAd by remember { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
-    val isAdReady by rewardedAdManager.isAdReady.collectAsState()
-    val adLoadState by rewardedAdManager.adLoadState.collectAsState()
-    val lastErrorMessage by rewardedAdManager.lastErrorMessage.collectAsState()
+    val isAdReady by unityAdsManager.isAdReady.collectAsState()
+    val adLoadState by unityAdsManager.adLoadState.collectAsState()
+    val lastErrorMessage by unityAdsManager.lastErrorMessage.collectAsState()
 
     LaunchedEffect(Unit) {
         visible = true
@@ -155,27 +155,30 @@ fun ResultOverlay(
                         OutlinedButton(
                             onClick = {
                                 if (adLoadState == AdLoadState.FAILED) {
-                                    rewardedAdManager.loadAd()
+                                    unityAdsManager.loadAd()
                                     return@OutlinedButton
                                 }
                                 if (activity != null && !isClaimed && !isLoadingAd && isAdReady) {
                                     isLoadingAd = true
                                     soundManager.setAdActive(true)
-                                    rewardedAdManager.showAd(
+                                    val rewardGranted = java.util.concurrent.atomic.AtomicBoolean(false)
+                                    unityAdsManager.showRewardedAd(
                                         activity = activity,
                                         onRewardEarned = {
-                                            val newCount = gameViewModel.record3XAdCompletion(roundId)
-                                            completedAds = newCount
-                                            if (newCount >= 3 && gameViewModel.claim3XBonusReward(roundId)) {
-                                                scope.launch { gemDataStore.addGems(9) }
-                                                Toast.makeText(context, "3X Reward Claimed! +9 Coins", Toast.LENGTH_SHORT).show()
+                                            if (rewardGranted.compareAndSet(false, true)) {
+                                                val newCount = gameViewModel.record3XAdCompletion(roundId)
+                                                completedAds = newCount
+                                                if (newCount >= 3 && gameViewModel.claim3XBonusReward(roundId)) {
+                                                    scope.launch { gemDataStore.addGems(9) }
+                                                    Toast.makeText(context, "3X Reward Claimed! +9 Coins", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
                                         onAdDismissed = {
                                             soundManager.setAdActive(false)
                                             isLoadingAd = false
                                         },
-                                        onAdNotReady = {
+                                        onAdFailed = {
                                             soundManager.setAdActive(false)
                                             isLoadingAd = false
                                             Toast.makeText(context, "Ad not ready. Try again.", Toast.LENGTH_SHORT).show()
@@ -251,26 +254,29 @@ fun ResultOverlay(
                         OutlinedButton(
                             onClick = {
                                 if (adLoadState == AdLoadState.FAILED) {
-                                    rewardedAdManager.loadAd()
+                                    unityAdsManager.loadAd()
                                     return@OutlinedButton
                                 }
                                 if (activity != null && !isLossClaimed && !isLoadingAd && isAdReady) {
                                     isLoadingAd = true
                                     soundManager.setAdActive(true)
-                                    rewardedAdManager.showAd(
+                                    val rewardGranted = java.util.concurrent.atomic.AtomicBoolean(false)
+                                    unityAdsManager.showRewardedAd(
                                         activity = activity,
                                         onRewardEarned = {
-                                            if (gameViewModel.claimLossAdReward(roundId)) {
-                                                isLossClaimed = true
-                                                scope.launch { gemDataStore.addGems(3) }
-                                                Toast.makeText(context, "Reward Claimed! +3 Coins", Toast.LENGTH_SHORT).show()
+                                            if (rewardGranted.compareAndSet(false, true)) {
+                                                if (gameViewModel.claimLossAdReward(roundId)) {
+                                                    isLossClaimed = true
+                                                    scope.launch { gemDataStore.addGems(3) }
+                                                    Toast.makeText(context, "Reward Claimed! +3 Coins", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
                                         onAdDismissed = {
                                             soundManager.setAdActive(false)
                                             isLoadingAd = false
                                         },
-                                        onAdNotReady = {
+                                        onAdFailed = {
                                             soundManager.setAdActive(false)
                                             isLoadingAd = false
                                             Toast.makeText(context, "Ad not ready. Try again.", Toast.LENGTH_SHORT).show()

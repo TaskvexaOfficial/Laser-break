@@ -38,7 +38,7 @@ fun GameScreen(
     gameState: GameState,
     gemCount: Int,
     gemDataStore: GemDataStore,
-    rewardedAdManager: com.example.ads.RewardedAdManager,
+    unityAdsManager: com.example.ads.UnityAdsManager,
     soundManager: SoundManager,
     onAction: (GameAction) -> Unit
 ) {
@@ -185,8 +185,8 @@ fun GameScreen(
 
         // Overlays
         when (gameState.status) {
-            GameStatus.WON -> ResultOverlay(true, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, soundManager, onAction)
-            GameStatus.LOST -> ResultOverlay(false, gemCount, gameState.roundId, gameViewModel, gemDataStore, rewardedAdManager, soundManager, onAction)
+            GameStatus.WON -> ResultOverlay(true, gemCount, gameState.roundId, gameViewModel, gemDataStore, unityAdsManager, soundManager, onAction)
+            GameStatus.LOST -> ResultOverlay(false, gemCount, gameState.roundId, gameViewModel, gemDataStore, unityAdsManager, soundManager, onAction)
             GameStatus.PAUSED -> PauseOverlay(onAction)
             else -> {}
         }

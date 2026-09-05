@@ -9,7 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.data.GemDataStore
 import com.example.model.GameStatus
 import com.example.viewmodel.GameViewModel
-import com.example.ads.RewardedAdManager
+import com.example.ads.UnityAdsManager
 import com.example.ads.ConsentManager
 import com.example.audio.SoundManager
 import kotlinx.coroutines.delay
@@ -22,7 +22,7 @@ fun AppNavigation(soundManager: SoundManager, consentManager: ConsentManager) {
     val gameViewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val gemDataStore = remember { GemDataStore(context) }
-    val rewardedAdManager = remember { RewardedAdManager(context) }
+    val unityAdsManager = remember { UnityAdsManager.getInstance(context) }
     
     val canRequestAds by consentManager.canRequestAds.collectAsState()
     
@@ -74,7 +74,7 @@ fun AppNavigation(soundManager: SoundManager, consentManager: ConsentManager) {
                 gameState = gameState,
                 gemCount = gemCount,
                 gemDataStore = gemDataStore,
-                rewardedAdManager = rewardedAdManager,
+                unityAdsManager = unityAdsManager,
                 soundManager = soundManager,
                 onAction = { action ->
                     when (action) {
