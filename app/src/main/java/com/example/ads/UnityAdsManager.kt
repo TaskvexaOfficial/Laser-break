@@ -10,6 +10,7 @@ import com.unity3d.ads.IUnityAdsLoadListener
 import com.unity3d.ads.IUnityAdsShowListener
 import com.unity3d.ads.UnityAds
 import com.unity3d.ads.UnityAdsShowOptions
+import com.unity3d.ads.UnityAdsLoadOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -185,7 +186,7 @@ class UnityAdsManager private constructor(private val appContext: Context) {
         Log.i(TAG, "=== [UNITY ADS DIAGNOSTIC] 2. Starting UnityAds.load() ===")
         Log.i(TAG, "[UNITY ADS DIAGNOSTIC] Placement ID passed to UnityAds.load(): '$AD_UNIT_ID'")
         Log.i(TAG, "[UNITY ADS DIAGNOSTIC] UnityAds.isInitialized(): ${UnityAds.isInitialized}")
-        UnityAds.load(AD_UNIT_ID, object : IUnityAdsLoadListener {
+        UnityAds.load(AD_UNIT_ID, UnityAdsLoadOptions(), object : IUnityAdsLoadListener {
             override fun onUnityAdsAdLoaded(placementId: String?) {
                 isLoadingAdInProgress.set(false)
                 mainHandler.post {

@@ -121,7 +121,7 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
-  implementation("com.unity3d.ads:unity-ads:4.12.5")
+  implementation("com.unity3d.ads:unity-ads:4.20.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
