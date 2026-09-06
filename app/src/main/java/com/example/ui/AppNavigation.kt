@@ -10,24 +10,18 @@ import com.example.data.GemDataStore
 import com.example.model.GameStatus
 import com.example.viewmodel.GameViewModel
 import com.example.ads.UnityAdsManager
-import com.example.ads.ConsentManager
 import com.example.audio.SoundManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation(soundManager: SoundManager, consentManager: ConsentManager) {
+fun AppNavigation(soundManager: SoundManager) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     val gameViewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val gemDataStore = remember { GemDataStore(context) }
     val unityAdsManager = remember { UnityAdsManager.getInstance(context) }
-    
-    val canRequestAds by consentManager.canRequestAds.collectAsState()
-    
-    val isPrivacyOptionsRequired by consentManager.isPrivacyOptionsRequired.collectAsState()
-    
     
     val gemCount by gemDataStore.gemCount.collectAsState(initial = 0)
     val soundEnabled by gemDataStore.soundEnabled.collectAsState(initial = true)
@@ -58,12 +52,6 @@ fun AppNavigation(soundManager: SoundManager, consentManager: ConsentManager) {
                 onPlayClick = {
                     gameViewModel.startNewGame()
                     navController.navigate("game")
-                },
-                isPrivacyOptionsRequired = isPrivacyOptionsRequired,
-                onPrivacyOptionsClick = {
-                    consentManager.showPrivacyOptionsForm {
-                        // Optional: Handle dismiss
-                    }
                 }
             )
         }

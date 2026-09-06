@@ -51,6 +51,9 @@ fun ResultOverlay(
 
     LaunchedEffect(Unit) {
         visible = true
+        if (!unityAdsManager.isReady()) {
+            unityAdsManager.loadAd()
+        }
     }
 
     AnimatedVisibility(

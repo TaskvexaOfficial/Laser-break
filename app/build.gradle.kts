@@ -121,8 +121,6 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
-  implementation("com.google.android.ump:user-messaging-platform:3.1.0")
-  implementation("com.startapp:inapp-sdk:5.1.0")
   implementation("com.unity3d.ads:unity-ads:4.12.5")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

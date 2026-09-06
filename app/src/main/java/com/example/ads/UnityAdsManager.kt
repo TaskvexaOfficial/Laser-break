@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.BuildConfig
 import com.unity3d.ads.IUnityAdsInitializationListener
 import com.unity3d.ads.IUnityAdsLoadListener
 import com.unity3d.ads.IUnityAdsShowListener
@@ -17,19 +16,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Production-ready and beginner-friendly manager for Unity Ads Rewarded Video Ads.
+ * State representing rewarded ad loading status.
+ */
+enum class AdLoadState {
+    NOT_LOADED,
+    LOADING,
+    READY,
+    FAILED
+}
+
+/**
+ * Dedicated, production-ready manager for Unity Ads Rewarded Ads.
  *
- * Ad Unit ID: "Rewarded_Android"
- *
- * To connect to your "Watch Ad" button:
- * ```kotlin
- * UnityAdsManager.getInstance(context).showRewardedAd(
- *     activity = activity,
- *     onRewardEarned = {
- *         // Grant reward to player (called ONLY when ad is fully watched)
- *     }
- * )
- * ```
+ * Configured with:
+ * - Unity Game ID: "800368057"
+ * - Rewarded Ad Unit ID: "Rewarded_Android"
+ * - Test Mode: true
  */
 class UnityAdsManager private constructor(private val appContext: Context) {
 
@@ -37,20 +39,20 @@ class UnityAdsManager private constructor(private val appContext: Context) {
         private const val TAG = "UnityAdsManager"
 
         /**
-         * The Unity Ads Rewarded Ad Unit ID specified for this project.
+         * Unity Rewarded Ad Unit ID for Android.
          */
         const val AD_UNIT_ID = "Rewarded_Android"
 
         /**
-         * Unity Game ID for Android.
+         * Real Unity Game ID for Android.
          */
-        var unityGameId: String = "800368057"
+        const val DEFAULT_GAME_ID = "800368057"
 
         @Volatile
         private var instance: UnityAdsManager? = null
 
         /**
-         * Get the singleton instance of [UnityAdsManager].
+         * Retrieves or creates the singleton instance of [UnityAdsManager].
          */
         fun getInstance(context: Context): UnityAdsManager {
             return instance ?: synchronized(this) {
@@ -60,9 +62,14 @@ class UnityAdsManager private constructor(private val appContext: Context) {
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val isInitializing = AtomicBoolean(false)
+    private val isLoadingAdInProgress = AtomicBoolean(false)
     private val isShowingAd = AtomicBoolean(false)
 
-    // Observable states for UI observation if needed
+    var unityGameId: String = DEFAULT_GAME_ID
+        private set
+
+    // Observable states
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
@@ -70,7 +77,7 @@ class UnityAdsManager private constructor(private val appContext: Context) {
     val isAdLoaded: StateFlow<Boolean> = _isAdLoaded.asStateFlow()
     val isAdReady: StateFlow<Boolean> get() = _isAdLoaded.asStateFlow()
 
-    private val _adLoadState = MutableStateFlow(AdLoadState.LOADING)
+    private val _adLoadState = MutableStateFlow(AdLoadState.NOT_LOADED)
     val adLoadState: StateFlow<AdLoadState> = _adLoadState.asStateFlow()
 
     private val _lastErrorMessage = MutableStateFlow<String?>(null)
@@ -80,39 +87,49 @@ class UnityAdsManager private constructor(private val appContext: Context) {
      * Initializes the Unity Ads SDK.
      *
      * @param context Application or Activity context.
-     * @param gameId The Unity Game ID (defaults to [unityGameId]).
-     * @param testMode True for test ads (defaults to true), false for production ads.
-     * @param onComplete Optional callback when initialization finishes.
+     * @param gameId Unity Game ID (defaults to 800368057).
+     * @param testMode Enables Unity Ads test mode (defaults to true).
+     * @param onComplete Optional callback when initialization finishes successfully.
      */
     fun initialize(
         context: Context = appContext,
-        gameId: String = unityGameId,
+        gameId: String = DEFAULT_GAME_ID,
         testMode: Boolean = true,
         onComplete: (() -> Unit)? = null
     ) {
         unityGameId = gameId
 
         if (UnityAds.isInitialized) {
-            Log.d(TAG, "Unity Ads SDK is already initialized.")
+            Log.i(TAG, "Unity Ads SDK is already initialized for Game ID: $gameId")
             _isInitialized.value = true
-            loadAd()
             onComplete?.invoke()
+            if (!_isAdLoaded.value && !isLoadingAdInProgress.get()) {
+                loadAd()
+            }
             return
         }
 
-        Log.d(TAG, "Initializing Unity Ads SDK with Game ID: $gameId (testMode: $testMode)...")
+        if (!isInitializing.compareAndSet(false, true)) {
+            Log.d(TAG, "Unity Ads SDK initialization is already in progress, awaiting result...")
+            return
+        }
+
+        Log.i(TAG, "Initializing Unity Ads SDK (Game ID: $gameId, testMode: $testMode)...")
+        _adLoadState.value = AdLoadState.LOADING
+
         UnityAds.initialize(
             context.applicationContext,
             gameId,
             testMode,
             object : IUnityAdsInitializationListener {
                 override fun onInitializationComplete() {
+                    isInitializing.set(false)
                     mainHandler.post {
-                        Log.d(TAG, "Unity Ads SDK initialization succeeded.")
+                        Log.i(TAG, "Unity Ads SDK initialized SUCCESSFULLY for Game ID: $gameId")
                         _isInitialized.value = true
                         _lastErrorMessage.value = null
                         onComplete?.invoke()
-                        // Automatically preload the first rewarded ad
+                        // Automatically preload the rewarded ad upon successful initialization
                         loadAd()
                     }
                 }
@@ -121,7 +138,8 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                     error: UnityAds.UnityAdsInitializationError?,
                     message: String?
                 ) {
-                    val errorDesc = "Initialization failed: ${error?.name} - $message"
+                    isInitializing.set(false)
+                    val errorDesc = "Unity Ads initialization FAILED: [Error: ${error?.name ?: "UNKNOWN"}] $message"
                     mainHandler.post {
                         Log.e(TAG, errorDesc)
                         _isInitialized.value = false
@@ -134,29 +152,37 @@ class UnityAdsManager private constructor(private val appContext: Context) {
     }
 
     /**
-     * Preloads a rewarded ad for the Ad Unit ID [AD_UNIT_ID].
+     * Preloads a rewarded ad for the placement [AD_UNIT_ID].
+     * If Unity Ads is not initialized, it will initialize first and then load.
      */
     fun loadAd() {
         if (!UnityAds.isInitialized) {
-            Log.w(TAG, "Cannot load ad: Unity Ads is not yet initialized.")
+            Log.w(TAG, "Unity Ads is not initialized yet. Triggering initialization before loading ad...")
             _adLoadState.value = AdLoadState.LOADING
+            initialize(appContext, unityGameId, testMode = true)
             return
         }
 
         if (_isAdLoaded.value) {
-            Log.d(TAG, "Rewarded ad is already loaded and ready.")
+            Log.i(TAG, "Unity Ads rewarded ad '$AD_UNIT_ID' is already loaded and ready.")
             _adLoadState.value = AdLoadState.READY
+            return
+        }
+
+        if (!isLoadingAdInProgress.compareAndSet(false, true)) {
+            Log.d(TAG, "Unity Ads rewarded ad '$AD_UNIT_ID' is already loading, skipping duplicate request.")
             return
         }
 
         _adLoadState.value = AdLoadState.LOADING
         _lastErrorMessage.value = null
 
-        Log.d(TAG, "Loading Unity Ads rewarded ad for placement: $AD_UNIT_ID...")
+        Log.i(TAG, "Starting Unity Ads load for placement: $AD_UNIT_ID...")
         UnityAds.load(AD_UNIT_ID, object : IUnityAdsLoadListener {
             override fun onUnityAdsAdLoaded(placementId: String?) {
+                isLoadingAdInProgress.set(false)
                 mainHandler.post {
-                    Log.d(TAG, "Unity Ads rewarded ad loaded successfully for placement: $placementId")
+                    Log.i(TAG, "Unity Ads rewarded ad LOADED SUCCESSFULLY for placement: $placementId")
                     _isAdLoaded.value = true
                     _adLoadState.value = AdLoadState.READY
                     _lastErrorMessage.value = null
@@ -168,7 +194,8 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                 error: UnityAds.UnityAdsLoadError?,
                 message: String?
             ) {
-                val errorDesc = "Ad load failed ($placementId): ${error?.name} - $message"
+                isLoadingAdInProgress.set(false)
+                val errorDesc = "Unity Ads load FAILED for placement '$placementId': [Error: ${error?.name ?: "UNKNOWN"}] $message"
                 mainHandler.post {
                     Log.e(TAG, errorDesc)
                     _isAdLoaded.value = false
@@ -180,16 +207,15 @@ class UnityAdsManager private constructor(private val appContext: Context) {
     }
 
     /**
-     * Simple public function to show the rewarded ad.
-     * Connect this function to your "Watch Ad" button.
+     * Displays the rewarded ad.
      *
-     * The [onRewardEarned] callback is triggered ONLY if the player watches the
-     * video to the very end without skipping.
+     * Rewards the player ONLY when the ad completion callback returns COMPLETED.
+     * If skipped, dismissed, or failed, no reward is granted.
      *
-     * @param activity The host Activity to display the ad over.
-     * @param onRewardEarned Called ONLY when the user fully completes the rewarded ad.
-     * @param onAdDismissed Called when the ad is closed (either completed, skipped, or dismissed).
-     * @param onAdFailed Called if the ad fails to show or is not ready.
+     * @param activity Host Activity to display the ad over.
+     * @param onRewardEarned Triggered ONLY when the user fully completes the rewarded ad.
+     * @param onAdDismissed Triggered when the ad is closed (either completed, skipped, or failed).
+     * @param onAdFailed Triggered if the ad fails to show or is not ready.
      */
     fun showRewardedAd(
         activity: Activity,
@@ -198,7 +224,7 @@ class UnityAdsManager private constructor(private val appContext: Context) {
         onAdFailed: ((errorMessage: String) -> Unit)? = null
     ) {
         if (!isShowingAd.compareAndSet(false, true)) {
-            Log.d(TAG, "An ad is already being displayed, ignoring duplicate show call.")
+            Log.d(TAG, "An ad is already being shown. Ignoring duplicate show call.")
             return
         }
 
@@ -207,6 +233,7 @@ class UnityAdsManager private constructor(private val appContext: Context) {
             val msg = "Unity Ads is not initialized yet."
             Log.w(TAG, msg)
             onAdFailed?.invoke(msg)
+            initialize(appContext, unityGameId, testMode = true)
             return
         }
 
@@ -215,17 +242,15 @@ class UnityAdsManager private constructor(private val appContext: Context) {
             val msg = "Unity Ads rewarded ad is not ready yet."
             Log.w(TAG, msg)
             onAdFailed?.invoke(msg)
-            // Trigger a reload attempt
             loadAd()
             return
         }
 
-        Log.d(TAG, "Showing Unity Ads rewarded ad for placement: $AD_UNIT_ID...")
-        // Reset ad loaded status while showing
+        Log.i(TAG, "Showing Unity Ads rewarded ad for placement: $AD_UNIT_ID...")
+        // Reset ad loaded state
         _isAdLoaded.value = false
         _adLoadState.value = AdLoadState.LOADING
 
-        // Prevent reward from being granted more than once per ad display
         val rewardGranted = AtomicBoolean(false)
 
         UnityAds.show(
@@ -234,11 +259,11 @@ class UnityAdsManager private constructor(private val appContext: Context) {
             UnityAdsShowOptions(),
             object : IUnityAdsShowListener {
                 override fun onUnityAdsShowStart(placementId: String?) {
-                    Log.d(TAG, "Unity Ads rewarded ad playback started for placement: $placementId")
+                    Log.i(TAG, "Unity Ads show started for placement: $placementId")
                 }
 
                 override fun onUnityAdsShowClick(placementId: String?) {
-                    Log.d(TAG, "Unity Ads rewarded ad clicked for placement: $placementId")
+                    Log.i(TAG, "Unity Ads ad clicked for placement: $placementId")
                 }
 
                 override fun onUnityAdsShowComplete(
@@ -247,21 +272,21 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                 ) {
                     isShowingAd.set(false)
                     mainHandler.post {
-                        Log.d(TAG, "Unity Ads rewarded ad finished with completion state: $state")
+                        Log.i(TAG, "Unity Ads show completed for placement '$placementId' with state: $state")
 
                         if (state == UnityAds.UnityAdsShowCompletionState.COMPLETED) {
                             if (rewardGranted.compareAndSet(false, true)) {
-                                Log.d(TAG, "Rewarded ad watched to completion. Granting reward to player!")
+                                Log.i(TAG, "Rewarded ad COMPLETED. Granting reward to player!")
                                 onRewardEarned()
                             }
                         } else if (state == UnityAds.UnityAdsShowCompletionState.SKIPPED) {
-                            Log.d(TAG, "Rewarded ad was skipped. Reward NOT granted.")
+                            Log.w(TAG, "Rewarded ad was SKIPPED by player. Reward NOT granted.")
                         } else {
-                            Log.w(TAG, "Rewarded ad finished without COMPLETED status ($state). Reward NOT granted.")
+                            Log.w(TAG, "Rewarded ad finished with state ($state). Reward NOT granted.")
                         }
 
                         onAdDismissed?.invoke()
-                        // Preload the next rewarded ad for the player
+                        // Automatically preload the next rewarded ad
                         loadAd()
                     }
                 }
@@ -272,14 +297,14 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                     message: String?
                 ) {
                     isShowingAd.set(false)
-                    val errorDesc = "Failed to show ad: ${error?.name} - $message"
+                    val errorDesc = "Unity Ads show FAILED for placement '$placementId': [Error: ${error?.name ?: "UNKNOWN"}] $message"
                     mainHandler.post {
                         Log.e(TAG, errorDesc)
                         _lastErrorMessage.value = errorDesc
                         _adLoadState.value = AdLoadState.FAILED
                         onAdFailed?.invoke(errorDesc)
                         onAdDismissed?.invoke()
-                        // Attempt to reload
+                        // Attempt to reload for next time
                         loadAd()
                     }
                 }
@@ -288,24 +313,7 @@ class UnityAdsManager private constructor(private val appContext: Context) {
     }
 
     /**
-     * Convenience method to show ad with onAdNotReady callback.
-     */
-    fun showAd(
-        activity: Activity,
-        onRewardEarned: () -> Unit,
-        onAdDismissed: () -> Unit,
-        onAdNotReady: () -> Unit
-    ) {
-        showRewardedAd(
-            activity = activity,
-            onRewardEarned = onRewardEarned,
-            onAdDismissed = onAdDismissed,
-            onAdFailed = { onAdNotReady() }
-        )
-    }
-
-    /**
-     * Check if a rewarded ad is currently ready to be shown.
+     * Checks whether a rewarded ad is loaded and ready to be shown.
      */
     fun isReady(): Boolean = _isAdLoaded.value && UnityAds.isInitialized
 }

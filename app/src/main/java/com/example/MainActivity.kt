@@ -13,12 +13,10 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ui.theme.LaserBreakTheme
 import com.example.ui.AppNavigation
 import com.example.audio.SoundManager
-import com.example.ads.ConsentManager
 import com.example.ads.UnityAdsManager
 
 class MainActivity : ComponentActivity() {
     private lateinit var soundManager: SoundManager
-    private lateinit var consentManager: ConsentManager
 
     override fun onDestroy() {
         super.onDestroy()
@@ -27,13 +25,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        consentManager = ConsentManager(this)
-        consentManager.gatherConsent {}
         soundManager = SoundManager(this)
         lifecycle.addObserver(soundManager)
 
         // Initialize Unity Ads SDK with real Game ID in test mode
-        UnityAdsManager.getInstance(this).initialize(this, testMode = true)
+        UnityAdsManager.getInstance(this).initialize(
+            context = this,
+            gameId = "800368057",
+            testMode = true
+        )
 
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LaserBreakTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavigation(soundManager = soundManager, consentManager = consentManager)
+                    AppNavigation(soundManager = soundManager)
                 }
             }
         }
