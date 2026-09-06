@@ -194,7 +194,7 @@ fun ResultOverlay(
                                 containerColor = if (isClaimed) Color(0xFF1E293B) else Color.Transparent,
                                 contentColor = if (isClaimed) Color.White.copy(alpha = 0.5f) else Color.White
                             ),
-                            modifier = Modifier.fillMaxWidth().height(64.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isClaimed && !isLoadingAd && (isAdReady || adLoadState == AdLoadState.FAILED)
                         ) {
@@ -210,7 +210,7 @@ fun ResultOverlay(
                                         text = lastErrorMessage ?: "", 
                                         fontSize = 10.sp,
                                         color = Color(0xFFFF6B6B),
-                                        maxLines = 1
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                     )
                                 } else if (!isClaimed && !isLoadingAd && isAdReady) {
                                     val remaining = 3 - completedAds
@@ -292,7 +292,7 @@ fun ResultOverlay(
                                 containerColor = if (isLossClaimed) Color(0xFF1E293B) else Color.Transparent,
                                 contentColor = if (isLossClaimed) Color.White.copy(alpha = 0.5f) else Color.White
                             ),
-                            modifier = Modifier.fillMaxWidth().height(64.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isLossClaimed && !isLoadingAd && (isAdReady || adLoadState == AdLoadState.FAILED)
                         ) {
@@ -308,7 +308,7 @@ fun ResultOverlay(
                                         text = lastErrorMessage ?: "", 
                                         fontSize = 10.sp,
                                         color = Color(0xFFFF6B6B),
-                                        maxLines = 1
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                     )
                                 } else if (!isLossClaimed && !isLoadingAd && isAdReady) {
                                     Text(

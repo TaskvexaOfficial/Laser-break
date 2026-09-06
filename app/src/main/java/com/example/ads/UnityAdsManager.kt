@@ -125,7 +125,8 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                 override fun onInitializationComplete() {
                     isInitializing.set(false)
                     mainHandler.post {
-                        Log.i(TAG, "Unity Ads SDK initialized SUCCESSFULLY for Game ID: $gameId")
+                        Log.i(TAG, "=== [UNITY ADS DIAGNOSTIC] 1. Initialization: SUCCESS ===")
+                        Log.i(TAG, "[UNITY ADS DIAGNOSTIC] Game ID: $gameId | testMode: $testMode | isInitialized: ${UnityAds.isInitialized}")
                         _isInitialized.value = true
                         _lastErrorMessage.value = null
                         onComplete?.invoke()
@@ -139,9 +140,13 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                     message: String?
                 ) {
                     isInitializing.set(false)
-                    val errorDesc = "Unity Ads initialization FAILED: [Error: ${error?.name ?: "UNKNOWN"}] $message"
+                    val errorEnum = error?.name ?: "UNKNOWN"
+                    val errorDesc = "Unity Ads initialization FAILED: [Error: $errorEnum] $message"
                     mainHandler.post {
-                        Log.e(TAG, errorDesc)
+                        Log.e(TAG, "=== [UNITY ADS DIAGNOSTIC] 1. Initialization: FAILED ===")
+                        Log.e(TAG, "[UNITY ADS DIAGNOSTIC] Game ID: $gameId | testMode: $testMode")
+                        Log.e(TAG, "[UNITY ADS DIAGNOSTIC] Error Enum: $errorEnum")
+                        Log.e(TAG, "[UNITY ADS DIAGNOSTIC] Error Message: $message")
                         _isInitialized.value = false
                         _adLoadState.value = AdLoadState.FAILED
                         _lastErrorMessage.value = errorDesc
@@ -177,12 +182,15 @@ class UnityAdsManager private constructor(private val appContext: Context) {
         _adLoadState.value = AdLoadState.LOADING
         _lastErrorMessage.value = null
 
-        Log.i(TAG, "Starting Unity Ads load for placement: $AD_UNIT_ID...")
+        Log.i(TAG, "=== [UNITY ADS DIAGNOSTIC] 2. Starting UnityAds.load() ===")
+        Log.i(TAG, "[UNITY ADS DIAGNOSTIC] Placement ID passed to UnityAds.load(): '$AD_UNIT_ID'")
+        Log.i(TAG, "[UNITY ADS DIAGNOSTIC] UnityAds.isInitialized(): ${UnityAds.isInitialized}")
         UnityAds.load(AD_UNIT_ID, object : IUnityAdsLoadListener {
             override fun onUnityAdsAdLoaded(placementId: String?) {
                 isLoadingAdInProgress.set(false)
                 mainHandler.post {
-                    Log.i(TAG, "Unity Ads rewarded ad LOADED SUCCESSFULLY for placement: $placementId")
+                    Log.i(TAG, "=== [UNITY ADS DIAGNOSTIC] Ad Load Result: SUCCESS ===")
+                    Log.i(TAG, "[UNITY ADS DIAGNOSTIC] Loaded Placement ID: '$placementId'")
                     _isAdLoaded.value = true
                     _adLoadState.value = AdLoadState.READY
                     _lastErrorMessage.value = null
@@ -195,9 +203,13 @@ class UnityAdsManager private constructor(private val appContext: Context) {
                 message: String?
             ) {
                 isLoadingAdInProgress.set(false)
-                val errorDesc = "Unity Ads load FAILED for placement '$placementId': [Error: ${error?.name ?: "UNKNOWN"}] $message"
+                val errorEnumName = error?.name ?: "UNKNOWN"
+                val errorDesc = "Unity Ads Load Failed\nError: $errorEnumName\nMessage: $message\nPlacement: $placementId"
                 mainHandler.post {
-                    Log.e(TAG, errorDesc)
+                    Log.e(TAG, "=== [UNITY ADS DIAGNOSTIC] Ad Load Result: FAILED ===")
+                    Log.e(TAG, "[UNITY ADS DIAGNOSTIC] 2. Exact Placement ID: '$placementId'")
+                    Log.e(TAG, "[UNITY ADS DIAGNOSTIC] 3. Exact UnityAdsLoadError Enum: $errorEnumName")
+                    Log.e(TAG, "[UNITY ADS DIAGNOSTIC] 4. Exact Error Message: $message")
                     _isAdLoaded.value = false
                     _adLoadState.value = AdLoadState.FAILED
                     _lastErrorMessage.value = errorDesc
